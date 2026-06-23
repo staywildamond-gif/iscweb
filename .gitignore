@@ -1,0 +1,17 @@
+# Temporales / editor
+_xlsx_tmp/
+.vscode/
+
+# Permisos locales de Claude Code (específicos de esta máquina)
+.claude/settings.local.json
+
+# Binarios derivados (el CSV es la fuente canónica)
+*.xlsx
+
+# Respaldos de avance personal (son datos tuyos, no del proyecto)
+avance_carrera.json
+
+# Basura del SO
+Thumbs.db
+desktop.ini
+.DS_Store

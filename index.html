@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi avance — Ingeniería en Sistemas Computacionales</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="wrap">
+
+    <header class="hero">
+      <div class="eyebrow">Avance académico · ISC</div>
+      <h1>Mi mapa de la carrera</h1>
+    </header>
+
+    <!-- ===== NAVEGACIÓN POR PESTAÑAS ===== -->
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="plan">Mi avance</button>
+      <button class="tab" data-tab="maestros">Maestros</button>
+      <button class="tab" data-tab="horario">Generar horario</button>
+      <button class="tab" data-tab="optativas">Optativas</button>
+    </nav>
+
+    <!-- ===== PESTAÑA: AVANCE ===== -->
+    <section class="tabpane active" id="pane-plan">
+
+      <div class="meterwrap">
+        <div class="meterhead">
+          <div class="metricbox">
+            <div class="big"><span id="creditosOk">0</span><small>de 387 créditos</small></div>
+            <div class="meterlabel">Créditos aprobados</div>
+          </div>
+          <div class="metricbox">
+            <div class="big alt"><span id="promedio">—</span></div>
+            <div class="meterlabel">Promedio general</div>
+          </div>
+          <div class="metricbox">
+            <div class="pct"><span id="pctOk">0</span>%</div>
+            <div class="meterlabel">Avance total</div>
+          </div>
+        </div>
+        <div class="ribbon" id="ribbon" aria-hidden="true"></div>
+        <div class="ribbonkey">Avance basado en materias aprobadas.</div>
+      </div>
+
+      <div class="chips" id="chips"></div>
+
+      <div class="toolbar">
+        <input class="search" id="search" type="text" placeholder="Buscar materia…" aria-label="Buscar materia">
+        <button class="btn" id="backupBtn">Guardar respaldo</button>
+        <button class="btn" id="restoreBtn">Cargar respaldo</button>
+        <button class="btn" id="resetBtn">Reiniciar</button>
+        <input type="file" id="fileInput" accept="application/json" hidden>
+      </div>
+
+      <main id="plan"></main>
+
+      <footer>
+        <span class="savehint"><span class="blip"></span><span id="saveState">Tu avance se guarda solo en este dispositivo.</span></span><br>
+        En las materias <b>pendientes</b> pulsa <b>Maestros</b> para ver quién la imparte y agregarlo a tu horario. En las aprobadas/reprobadas escribe tu calificación.
+      </footer>
+    </section>
+
+    <!-- ===== PESTAÑA: MAESTROS ===== -->
+    <section class="tabpane" id="pane-maestros">
+      <div class="pane-head">
+        <h2 class="pane-title">Maestros</h2>
+        <p class="pane-sub"><b id="profCount">0</b> maestros en total. Métricas tomadas del registro oficial (solo lectura).</p>
+        <div class="profs-toolbar">
+          <input class="search" id="searchProf" type="text" placeholder="Buscar maestro o materia…" aria-label="Buscar maestro">
+          <label class="sort-wrap">Ordenar por:
+            <select id="sortProf">
+              <optgroup label="Maestro">
+                <option value="name|asc">Nombre A→Z</option>
+                <option value="name|desc">Nombre Z→A</option>
+              </optgroup>
+              <optgroup label="Calidad">
+                <option value="calidad|desc">Calidad — Mayor a menor</option>
+                <option value="calidad|asc">Calidad — Menor a mayor</option>
+              </optgroup>
+              <optgroup label="Lo recomiendan">
+                <option value="recomiendan|desc">Recomiendan — Mayor a menor</option>
+                <option value="recomiendan|asc">Recomiendan — Menor a mayor</option>
+              </optgroup>
+              <optgroup label="Dificultad">
+                <option value="dificultad|asc">Dificultad — Menor a mayor</option>
+                <option value="dificultad|desc">Dificultad — Mayor a menor</option>
+              </optgroup>
+              <optgroup label="Otros criterios">
+                <option value="grupo|asc">Grupo A→Z</option>
+                <option value="semestre|asc">Semestre 1→8</option>
+                <option value="semestre|desc">Semestre 8→1</option>
+                <option value="materia|asc">Materia A→Z</option>
+              </optgroup>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="profs-table" id="profsTable">
+          <thead id="profsHead"></thead>
+          <tbody id="profsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== PESTAÑA: GENERAR HORARIO ===== -->
+    <section class="tabpane" id="pane-horario">
+      <div class="pane-head">
+        <h2 class="pane-title">Generar horario</h2>
+        <p class="pane-sub">Agrega maestros desde tus materias pendientes o reprobadas en la pestaña <b>Mi avance</b>. Aquí se contabilizan los créditos inscritos (máx. <b>55</b>).</p>
+      </div>
+
+      <div class="cred-summary" id="credSummary"></div>
+
+      <!-- P17: Modo Manual vs Automático -->
+      <div class="auto-panel">
+        <div class="auto-tabs">
+          <button class="auto-tab active" data-mode="manual">✋ Manual</button>
+          <button class="auto-tab" data-mode="auto">⚡ Automático</button>
+        </div>
+        <div class="auto-config" data-mode="auto" hidden>
+          <div class="auto-row">
+            <label>Hora entrada
+              <input type="time" id="autoEntrada" value="07:00" step="1800">
+            </label>
+            <label>Hora salida
+              <input type="time" id="autoSalida" value="15:00" step="1800">
+            </label>
+            <label>Máx materias
+              <input type="number" id="autoMax" min="1" max="9" value="7">
+            </label>
+            <button id="autoGenBtn" class="btn-primary">Generar horario automático</button>
+          </div>
+          <div class="auto-hint">Toma las materias pendientes del semestre actual (el más bajo sin todas aprobadas) y elige el grupo que mejor cuadre en tu ventana de tiempo y máx créditos. Puedes editar después.</div>
+          <div class="auto-result" id="autoResult"></div>
+        </div>
+      </div>
+
+      <div class="horario-actions">
+        <button id="clearHorarioBtn" class="btn-danger">🗑 Borrar todo el horario</button>
+      </div>
+
+      <div id="horarioTable"></div>
+
+      <div id="horarioList"></div>
+    </section>
+
+    <!-- ========== PESTAÑA 4 · OPTATIVAS ========== -->
+    <section class="tabpane" id="pane-optativas">
+      <h2 class="pane-title">Optativas — Rutas de especialización</h2>
+      <p class="pane-sub">Cada rama tiene una materia en 6.° semestre (A1 o B1) y otra en 7.° (A2 o B2). Las que ya elegiste se resaltan.</p>
+      <div id="rutasOpt"></div>
+    </section>
+
+  </div>
+
+  <script src="roster.js"></script>
+  <script src="metrics.js"></script>
+  <script src="schedule.js"></script>
+  <script src="optativas.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
