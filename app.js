@@ -168,11 +168,27 @@ function canInscribir(rec) {
   return true;
 }
 
+function creditosBloqueados() {
+  let total = 0;
+  for (let s = 0; s < PLAN.length; s++) {
+    PLAN[s].materias.forEach(([, cred], i) => {
+      const rec = getSub(idOf(s, i), "");
+      if (rec.status === "reprobada" && rec.veces >= 2) total += cred;
+    });
+  }
+  return total;
+}
+
 // Texto del badge de estado
 function statusBadgeText(rec) {
   if (rec.status === "aprobada") return rec.veces === 2 ? "Aprobada (recurse)" : "Aprobada";
-  if (rec.status === "reprobada") return rec.veces === 2 ? "🔒 Bloqueada" : "Reprobada";
-  return "Pendiente";
+  if (rec.status === "reprobada") return rec.veces >= 2 ? "🔒 Bloqueada · sin 3.er intento" : "Reprobada";
+  // pendiente: distingue 1ª vez de recurse en curso (2ª vez sin calif)
+  return rec.veces >= 2 ? "🔁 En recurse" : "Pendiente";
+}
+// ¿La materia está en recurse en curso? (2ª vez, aún sin calificar)
+function esEnRecurse(rec) {
+  return rec.status === "pendiente" && rec.veces >= 2;
 }
 
 function getMetric(name) {
@@ -226,9 +242,13 @@ function scheduleFor(s, i) {
       ROSTER.filter((e) => e.m === "OPTATIVA " + slot.label).map((e) => e.t)
     );
     const semChar = String(slot.sem);
-    return sched.filter(
-      (e) => profs.has(e.profesor) && e.materia.includes("|") && e.grupo.startsWith(semChar)
-    );
+    return sched.filter((e) => {
+      if (!e.materia.includes("|") || !e.grupo.startsWith(semChar)) return false;
+      // Vespertino no tiene división A/B: mostrar todas las optativas del semestre.
+      // Matutino conserva el filtro A/B exacto por roster.
+      if (turnoDeGrupo(e.grupo) === "V") return true;
+      return profs.has(e.profesor);
+    });
   }
   const def = PLAN[s].materias[i][0];
   const k = norm(def);
@@ -269,7 +289,7 @@ function allTeachers() {
     // Extraer grupos del campo g (ej: "1CM1, 1CM5" o "6CM3 (Big Data)")
     (e.g || "").split(",").forEach((gp) => {
       const m = gp.trim().match(/^[1-8][A-Z]{2}\d+/);
-      if (m) map[e.t].grupos.add(m[0]);
+      if (m) { map[e.t].grupos.add(m[0]); map[e.t].semestres.add(parseInt(m[0][0])); }
     });
     // Semestre desde SCHEDULE (más confiable) o desde matToSem
     const semFromMat = matToSem.get(norm(e.m));
@@ -293,7 +313,31 @@ function allTeachers() {
 const TEACHERS = allTeachers();
 
 // Catálogo de todas las materias (para el menú "Agregar materia")
-const ALL_MATERIAS = [...new Set(ROSTER.map((e) => e.m))].sort((a, b) => a.localeCompare(b));
+const ALL_MATERIAS = (() => {
+  const seen = new Set(); const out = [];
+  ROSTER.map((e) => e.m).sort((a, b) => a.localeCompare(b)).forEach((m) => {
+    const k = norm(m); if (!seen.has(k)) { seen.add(k); out.push(m); }
+  });
+  return out;
+})();
+
+// Turno (M/V) a partir del código de grupo. 3.er char: M=matutino, V=vespertino.
+function turnoDeGrupo(g) {
+  const m = String(g).trim().match(/^[1-8][A-Z]([MV])/);
+  return m ? m[1] : null;
+}
+function turnosDeGrupos(grupos) {
+  const set = new Set();
+  (grupos || []).forEach((g) => { const t = turnoDeGrupo(g); if (t) set.add(t); });
+  return set;
+}
+function turnoBadges(grupos) {
+  const set = turnosDeGrupos(grupos);
+  let html = "";
+  if (set.has("M")) html += `<span class="tbadge tm" title="Matutino">M</span>`;
+  if (set.has("V")) html += `<span class="tbadge tv" title="Vespertino">V</span>`;
+  return html;
+}
 
 function titleCase(s) {
   return String(s).toLowerCase().replace(/(^|\s|\()([a-záéíóúñ])/g, (m) => m.toUpperCase());
@@ -412,7 +456,7 @@ PLAN.forEach((blk, s) => {
           </select>
           <input class="calif" type="number" min="0" max="10" step="1" placeholder="Cal"
                  value="${esc(rec.calif)}" aria-label="Calificación de ${esc(name)}">
-          <span class="status-badge" data-st="${rec.status}" data-blocked="${rec.status === "reprobada" && rec.veces >= 2 ? "1" : "0"}">${statusBadgeText(rec)}</span>
+          <span class="status-badge" data-st="${rec.status}" data-blocked="${rec.status === "reprobada" && rec.veces >= 2 ? "1" : "0"}" data-recurse="${esEnRecurse(rec) ? "1" : "0"}">${statusBadgeText(rec)}</span>
           <button class="profsBtn" type="button">Maestros <span class="caret">▾</span></button>
         </div>
       </div>
@@ -507,6 +551,7 @@ function applyRowMode(subj, rec) {
   const isBlocked = rec.status === "reprobada" && rec.veces >= 2;
   badge.dataset.st = rec.status;
   badge.dataset.blocked = isBlocked ? "1" : "0";
+  badge.dataset.recurse = esEnRecurse(rec) ? "1" : "0";
   badge.textContent = statusBadgeText(rec);
   // Profes solo visible si se puede inscribir
   const inscribible = canInscribir(rec);
@@ -539,10 +584,14 @@ function renderDrop(drop, s, i) {
           (h) => h.sid === id && h.maestro === e.profesor && (h.grupo || "") === e.grupo
         );
         const rama = e.materia.includes("|") ? e.materia.split("|")[0].trim() : "";
+        const turno = turnoDeGrupo(e.grupo);
+        const turnoChip = turno === "V"
+          ? `<span class="tchip tv">🌙 Vesp</span>`
+          : `<span class="tchip tm">☀️ Mat</span>`;
         return `
         <div class="tcard">
           <div class="tcard-main">
-            <div class="tcard-name">${esc(e.profesor)}</div>
+            <div class="tcard-name">${esc(e.profesor)} ${turnoChip}</div>
             <div class="tcard-grupo">${esc(e.grupo)} · Ed. ${esc(e.edificio)} · Salón ${esc(e.salon)}${rama ? ` · <b>${esc(titleCase(rama))}</b>` : ""}</div>
             <div class="tcard-sesiones">${esc(sesionesText(e.sesiones))}</div>
             ${miniMetrics(m)}
@@ -704,6 +753,7 @@ searchEl.addEventListener("input", applyFilters);
 //  PESTAÑA 2 · MAESTROS
 // ============================================================
 let profSort = { key: "name", dir: "asc" };
+let profTurno = "ambos"; // P16: ambos | M | V
 const profsHead = document.getElementById("profsHead");
 const profsBody = document.getElementById("profsBody");
 const searchProf = document.getElementById("searchProf");
@@ -744,6 +794,12 @@ function renderProfs() {
     );
   }
 
+  // P16: filtro por turno (derivado de los grupos del maestro)
+  if (profTurno !== "ambos") {
+    rows = rows.filter((r) => turnosDeGrupos(r.grupos).has(profTurno));
+  }
+  document.getElementById("profCount").textContent = rows.length;
+
   const { key, dir } = profSort;
   rows.sort((a, b) => {
     // Texto (alfabético): name, grupo, materia
@@ -767,7 +823,7 @@ function renderProfs() {
   profsBody.innerHTML = rows.map((r) => `
     <tr>
       <td>
-        <div class="pname">${esc(r.name)}</div>
+        <div class="pname">${esc(r.name)}${turnoBadges(r.grupos)}</div>
         ${matsCellHTML(r.name)}
       </td>
       <td>${metricCell(r.calidad, "cal")}</td>
@@ -843,6 +899,16 @@ sortProfEl.addEventListener("change", () => {
   renderProfs();
 });
 
+// P16: filtro por turno (Ambos / Matutino / Vespertino)
+document.getElementById("turnoFilter").addEventListener("click", (e) => {
+  const btn = e.target.closest(".turno-btn");
+  if (!btn) return;
+  profTurno = btn.dataset.turno;
+  document.querySelectorAll("#turnoFilter .turno-btn").forEach((b) =>
+    b.classList.toggle("active", b === btn));
+  renderProfs();
+});
+
 // ============================================================
 //  PESTAÑA 3 · GENERAR HORARIO
 // ============================================================
@@ -850,18 +916,11 @@ const horarioListEl = document.getElementById("horarioList");
 const credSummaryEl = document.getElementById("credSummary");
 
 function renderHorario() {
-  // P9: materias reprobadas en el plan que aún no tienen profe en el horario
-  const reprobadasSinProfe = [];
-  PLAN.forEach((blk, s) => blk.materias.forEach(([name], i) => {
-    const id = idOf(s, i);
-    if (getSub(id, name).status === "reprobada" && !state.horario.some((h) => h.sid === id)) {
-      reprobadasSinProfe.push(name);
-    }
-  }));
-
   const inscritos = state.horario.reduce((a, h) => a + h.cred, 0);
+  const credBloq = creditosBloqueados();
   const nMaterias = state.horario.length;
-  const over = inscritos > MAX_CRED;
+  const maxEfectivo = MAX_CRED - credBloq;
+  const over = inscritos > maxEfectivo;
 
   // P12: promedios de calidad y dificultad (simples, sin ponderar)
   let sumCal = 0, sumDif = 0, nCal = 0, nDif = 0;
@@ -875,8 +934,8 @@ function renderHorario() {
 
   credSummaryEl.innerHTML = `
     <div class="cs-card ${over ? "danger" : ""}">
-      <div class="cs-val">${fmt(inscritos)} <span class="cs-max">/ ${MAX_CRED}</span></div>
-      <div class="cs-label">Créditos inscritos</div>
+      <div class="cs-val">${fmt(inscritos)} <span class="cs-max">/ ${fmt(maxEfectivo)}</span></div>
+      <div class="cs-label">Créditos inscritos${credBloq ? ` <span class="cs-bloq">(${fmt(credBloq)} cr bloq.)</span>` : ""}</div>
     </div>
     <div class="cs-card">
       <div class="cs-val">${nMaterias}</div>
@@ -894,15 +953,7 @@ function renderHorario() {
   if (over) {
     const warn = document.createElement("div");
     warn.className = "over-warn";
-    warn.textContent = `⚠️ Llevas ${fmt(inscritos)} créditos inscritos; el máximo es ${MAX_CRED}. Quita ${fmt(inscritos - MAX_CRED)} créditos.`;
-    credSummaryEl.appendChild(warn);
-  }
-
-  // P9: bloqueo si hay reprobadas sin profe asignado
-  if (reprobadasSinProfe.length > 0) {
-    const warn = document.createElement("div");
-    warn.className = "over-warn block-warn";
-    warn.innerHTML = `🚫 No puedes inscribir hasta agregar profe a las materias reprobadas pendientes de recurse:<br><b>${reprobadasSinProfe.map(esc).join(" · ")}</b>`;
+    warn.textContent = `⚠️ Llevas ${fmt(inscritos)} créditos inscritos; tu máximo efectivo es ${fmt(maxEfectivo)}${credBloq ? ` (55 − ${fmt(credBloq)} bloqueados)` : ""}. Quita ${fmt(inscritos - maxEfectivo)} créditos.`;
     credSummaryEl.appendChild(warn);
   }
 
@@ -1165,89 +1216,225 @@ function sesionesChocan(a, b) {
   return false;
 }
 
-// Puntaje de una oferta: calidad alta + dificultad baja
-function puntajeOferta(profesor) {
-  const m = getMetric(profesor);
-  const cal = Number(m.calidad) || 0;
-  const dif = Number(m.dificultad) || 0;
-  return cal * 2 - dif; // pondera calidad un poco más
+// Bloques de clase (horas de inicio). El índice mide huecos en la rejilla.
+const BLOQUE_INI = ["07:00","08:30","10:30","12:00","13:30","15:00","16:30","18:30","20:00"];
+function bloqueIdx(ini) {
+  const i = BLOQUE_INI.indexOf(ini);
+  if (i !== -1) return i;
+  const min = hhmmToMin(ini); let best = 0;
+  BLOQUE_INI.forEach((b, k) => { if (hhmmToMin(b) <= min) best = k; });
+  return best;
+}
+// Horas muertas: bloques vacíos entre la 1.ª y la última clase de cada día
+function contarHuecos(items) {
+  const byDay = {};
+  items.forEach((it) => (it.sesiones || []).forEach((s) => {
+    (byDay[s.dia] = byDay[s.dia] || []).push(bloqueIdx(s.ini));
+  }));
+  let huecos = 0;
+  Object.values(byDay).forEach((idxs) => {
+    idxs.sort((a, b) => a - b);
+    huecos += (idxs[idxs.length - 1] - idxs[0] + 1) - idxs.length;
+  });
+  return huecos;
+}
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+// Semestre que estás armando: el más alto entre las materias "nuevas" ya puestas a mano;
+// si no hay, el más bajo con pendientes inscribibles.
+function detectarSemestreObjetivo(base) {
+  const sems = base.filter((h) => h.tipo !== "recurse")
+    .map((h) => { const m = String(h.sid).match(/^s(\d+)-/); return m ? parseInt(m[1]) : null; })
+    .filter((x) => x != null);
+  if (sems.length) return Math.max(...sems);
+  for (let s = 0; s < PLAN.length; s++) {
+    const hayPend = PLAN[s].materias.some(([name], i) => {
+      const id = idOf(s, i);
+      const r = getSub(id, name);
+      return r.status === "pendiente" && canInscribir(r) && !OPT_SLOTS[id];
+    });
+    if (hayPend) return s;
+  }
+  return detectarSemestreActual();
 }
 
-document.getElementById("autoGenBtn").onclick = () => {
+// Ajusta la ventana horaria sugerida según el turno elegido
+document.getElementById("autoTurno").addEventListener("change", (e) => {
+  const v = e.target.value;
+  const ent = document.getElementById("autoEntrada");
+  const sal = document.getElementById("autoSalida");
+  if (v === "M") { ent.value = "07:00"; sal.value = "15:00"; }
+  else if (v === "V") { ent.value = "12:00"; sal.value = "21:30"; }
+  else { ent.value = "07:00"; sal.value = "21:30"; }
+});
+
+// Estado del generador (para el botón "Otra opción")
+let autoPool = [];        // soluciones distintas, todas con el máximo de materias colocadas
+let autoLastKey = null;   // última combinación mostrada (para no repetir)
+let autoCtx = null;       // { semNombre, totalFaltantes }
+
+function keyDeSol(sol) { return sol.elegidas.map((e) => e.sid + ":" + e.grupo).sort().join("|"); }
+
+function generarHorarioAuto() {
   const entrada = document.getElementById("autoEntrada").value;
   const salida = document.getElementById("autoSalida").value;
+  const turno = document.getElementById("autoTurno").value;
   const maxMat = Math.max(1, Math.min(9, parseInt(document.getElementById("autoMax").value) || 7));
   const resultEl = document.getElementById("autoResult");
+  const otraBtn = document.getElementById("autoOtraBtn");
 
   if (!entrada || !salida) { alert("Captura hora de entrada y salida."); return; }
   const iniMin = hhmmToMin(entrada);
   const finMin = hhmmToMin(salida);
   if (iniMin >= finMin) { alert("La hora de salida debe ser mayor que la de entrada."); return; }
 
-  const semIdx = detectarSemestreActual();
-  const semNombre = PLAN[semIdx].sem;
+  const base = state.horario.filter((h) => !h._auto);
+  const credBloq = creditosBloqueados();
+  const credBase = base.reduce((a, h) => a + h.cred, 0);
+  const credDisponibles = MAX_CRED - credBloq - credBase;
 
-  // Pendientes del semestre actual que se pueden inscribir
-  const pendientes = [];
-  PLAN[semIdx].materias.forEach(([name, cred], i) => {
-    const id = idOf(semIdx, i);
-    const rec = getSub(id, name);
-    if (rec.status === "pendiente" && canInscribir(rec)) {
-      pendientes.push({ id, name, cred, i, s: semIdx });
-    }
-  });
-
-  if (pendientes.length === 0) {
-    resultEl.innerHTML = `<div class="auto-warn">No hay materias pendientes en <b>${semNombre}</b>.</div>`;
-    return;
-  }
-
-  // Para cada pendiente, obtener ofertas que caigan en la ventana, ordenadas por puntaje
-  const candidatos = pendientes.map((p) => {
-    const ofertas = scheduleFor(p.s, p.i)
-      .filter((e) => ofertaCaeEnVentana(e.sesiones, iniMin, finMin))
-      .sort((a, b) => puntajeOferta(b.profesor) - puntajeOferta(a.profesor));
-    return { ...p, ofertas };
-  });
-
-  // Greedy: por orden, tomar la mejor oferta que no choque con lo ya seleccionado
-  const elegidas = [];
-  const sinFit = [];
-  candidatos.forEach((p) => {
-    if (elegidas.length >= maxMat) return;
-    const compatible = p.ofertas.find((of) => {
-      return !elegidas.some((e) => sesionesChocan(e.sesiones, of.sesiones));
+  const faltantes = [];
+  for (let s = 0; s < PLAN.length; s++) {
+    PLAN[s].materias.forEach(([name, cred], i) => {
+      const id = idOf(s, i);
+      if (OPT_SLOTS[id]) return;
+      const rec = getSub(id, name);
+      if (rec.status === "pendiente" && canInscribir(rec) && !base.some((h) => h.sid === id)) {
+        faltantes.push({ id, name, cred, i, s, recurse: rec.veces >= 2 });
+      }
     });
-    if (compatible) {
-      elegidas.push({
-        sid: p.id, materia: p.name, maestro: compatible.profesor, grupo: compatible.grupo,
-        edificio: compatible.edificio, salon: compatible.salon, sesiones: compatible.sesiones,
-        cred: p.cred, tipo: "nueva",
-      });
-    } else {
-      sinFit.push(p.name);
-    }
-  });
+  }
 
-  if (elegidas.length === 0) {
-    resultEl.innerHTML = `<div class="auto-warn">⚠️ No se pudo armar ninguna materia en esa ventana. Amplía hora de entrada/salida.</div>`;
+  if (faltantes.length === 0) {
+    autoPool = []; autoLastKey = null; autoCtx = null;
+    if (otraBtn) otraBtn.hidden = true;
+    resultEl.innerHTML = `<div class="auto-warn">No faltan materias por inscribir (o ya las tienes en el horario).</div>`;
     return;
   }
 
-  // Sobrescribe el horario con la propuesta
-  state.horario = elegidas;
+  if (credDisponibles <= 0) {
+    autoPool = []; if (otraBtn) otraBtn.hidden = true;
+    resultEl.innerHTML = `<div class="auto-warn">No hay créditos disponibles (${fmt(credBase)} inscritos + ${fmt(credBloq)} bloqueados = ${fmt(credBase + credBloq)} de ${MAX_CRED}).</div>`;
+    return;
+  }
+
+  const addMax = Math.max(0, maxMat - base.length);
+  if (addMax === 0) {
+    if (otraBtn) otraBtn.hidden = true;
+    resultEl.innerHTML = `<div class="auto-warn">Ya tienes ${base.length} materias en el horario (tu tope es ${maxMat}). Sube el tope para agregar más.</div>`;
+    return;
+  }
+
+  const cand = faltantes.map((f) => {
+    const ofs = scheduleFor(f.s, f.i)
+      .filter((e) => turno === "ambos" || (turnoDeGrupo(e.grupo) || "M") === turno)
+      .filter((e) => ofertaCaeEnVentana(e.sesiones, iniMin, finMin))
+      .filter((e) => !base.some((h) => sesionesChocan(h.sesiones, e.sesiones)));
+    return { ...f, ofs };
+  });
+
+  const bySem = {};
+  for (const f of cand) (bySem[f.s] = bySem[f.s] || []).push(f);
+  const semKeys = Object.keys(bySem).sort((a, b) => a - b);
+
+  const soluciones = [];
+  const seen = new Set();
+  for (let iter = 0; iter < 600; iter++) {
+    const orden = [];
+    for (const s of semKeys) orden.push(...shuffle([...bySem[s]]));
+
+    const elegidas = [];
+    let credAcum = 0;
+    for (const f of orden) {
+      if (elegidas.length >= addMax) break;
+      if (credAcum + f.cred > credDisponibles) continue;
+      const ops = shuffle(f.ofs).filter((of) => !elegidas.some((e) => sesionesChocan(e.sesiones, of.sesiones)));
+      if (ops.length) {
+        const of = ops[0];
+        elegidas.push({
+          sid: f.id, materia: f.name, maestro: of.profesor, grupo: of.grupo,
+          edificio: of.edificio, salon: of.salon, sesiones: of.sesiones,
+          cred: f.cred, tipo: f.recurse ? "recurse" : "nueva", _auto: true,
+        });
+        credAcum += f.cred;
+      }
+    }
+    if (!elegidas.length) continue;
+    const key = elegidas.map((e) => e.sid + ":" + e.grupo).sort().join("|");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    soluciones.push({ elegidas, placed: elegidas.length, huecos: contarHuecos(base.concat(elegidas)) });
+  }
+
+  if (!soluciones.length) {
+    autoPool = []; if (otraBtn) otraBtn.hidden = true;
+    resultEl.innerHTML = `<div class="auto-warn">⚠️ No se pudo cuadrar ninguna materia faltante en esa ventana. Amplía tu horario de entrada/salida o cambia de turno.</div>`;
+    return;
+  }
+
+  soluciones.sort((a, b) => b.placed - a.placed || a.huecos - b.huecos);
+  const bestPlaced = soluciones[0].placed;
+  const minHuecos = soluciones.find((s) => s.placed === bestPlaced).huecos;
+  autoPool = soluciones.filter((s) => s.placed === bestPlaced && s.huecos === minHuecos);
+  autoLastKey = null;
+  autoCtx = { totalFaltantes: faltantes.length };
+
+  aplicarSolucionAuto();
+}
+
+// Aplica una solución del pool (aleatoria y distinta a la anterior) sobre la base manual
+function aplicarSolucionAuto() {
+  if (!autoPool.length || !autoCtx) return;
+  const resultEl = document.getElementById("autoResult");
+  const otraBtn = document.getElementById("autoOtraBtn");
+  const base = state.horario.filter((h) => !h._auto);
+
+  let pool = autoPool;
+  if (autoPool.length > 1 && autoLastKey) {
+    const filtered = autoPool.filter((s) => keyDeSol(s) !== autoLastKey);
+    if (filtered.length) pool = filtered;
+  }
+  const sol = pool[Math.floor(Math.random() * pool.length)];
+  autoLastKey = keyDeSol(sol);
+
+  state.horario = base.concat(sol.elegidas);
   save();
   renderHorario();
 
-  const totalCred = elegidas.reduce((a, e) => a + e.cred, 0);
-  let html = `<div class="auto-ok">✅ Se inscribieron <b>${elegidas.length}</b> de <b>${pendientes.length}</b> materias de ${semNombre} (${fmt(totalCred)} créditos).</div>`;
-  if (sinFit.length > 0) {
-    html += `<div class="auto-warn">⚠️ No cupieron por choque/ventana: <b>${sinFit.map(esc).join(" · ")}</b>. Agrégalas manualmente o amplía tu ventana de tiempo.</div>`;
+  if (otraBtn) otraBtn.hidden = autoPool.length < 2;
+
+  const totalCred = state.horario.reduce((a, e) => a + e.cred, 0);
+  const colocadas = sol.elegidas.length;
+  const sinFit = autoCtx.totalFaltantes - colocadas;
+  const porSem = {};
+  sol.elegidas.forEach((e) => {
+    const m = e.sid.match(/^s(\d+)-/);
+    const s = m ? parseInt(m[1]) : 0;
+    (porSem[s] = porSem[s] || []).push(e);
+  });
+  const resumenSems = Object.keys(porSem).sort((a, b) => a - b)
+    .map((s) => `${porSem[s].length} de ${PLAN[s].sem}`).join(", ");
+  let html = `<div class="auto-ok">✅ Agregué <b>${colocadas}</b> materia(s): ${resumenSems}. ` +
+    `Horario: <b>${state.horario.length}</b> materias · ${fmt(totalCred)} créditos · ` +
+    `<b>${sol.huecos === 0 ? "sin horas muertas" : sol.huecos + " hueco(s)"}</b>.</div>`;
+  if (sinFit > 0) {
+    html += `<div class="auto-warn">⚠️ ${sinFit} materia(s) no cupieron sin chocar en tu ventana. Amplía el horario o agrégalas a mano.</div>`;
   }
-  if (elegidas.length < pendientes.length && elegidas.length === maxMat) {
-    html += `<div class="auto-hint">Llegaste al máximo de ${maxMat} materias. Si quieres más, sube el tope.</div>`;
+  if (autoPool.length > 1) {
+    html += `<div class="auto-hint">¿No te convence? Pulsa <b>🎲 Otra opción</b> para barajar otra combinación igual de compacta.</div>`;
   }
   resultEl.innerHTML = html;
+}
+
+document.getElementById("autoGenBtn").onclick = () => generarHorarioAuto();
+document.getElementById("autoOtraBtn").onclick = () => {
+  if (autoPool.length) aplicarSolucionAuto(); else generarHorarioAuto();
 };
 
 // P14: Borrar todo el horario

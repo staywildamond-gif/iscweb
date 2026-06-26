@@ -14,19 +14,19 @@ Sin backend, sin framework. Todo vive en archivos estáticos servidos en `http:/
 index.html           ← UI + sistema de pestañas
 app.js               ← lógica principal (estado, render, eventos)
 styles.css           ← visual
-schedule.js          ← generado desde horarios.csv (240 ofertas, M ISC)
-metrics.js           ← generado desde AESTR_CORREGIDO_3.csv (133 profes M ISC)
-roster.js            ← mapeo profes → materias (versión vieja, aún usada para OPTATIVA A1/B1)
+schedule.js          ← generado desde horarios.csv + IMG/VESP/horario_completo1.csv (430 ofertas, M+V ISC)
+metrics.js           ← generado desde AESTR_CORREGIDO_3.csv + AESTR_VESPERTINO_plantilla.csv (202 profes M+V)
+roster.js            ← mapeo profes → materias (M + V); aún necesario para resolver OPTATIVA A1/B1
 optativas.js         ← 14 especializaciones (ramas) y sus materias por sem
 ```
 
 ### Fuentes canónicas (CSVs editables a mano)
 
 ```
-horarios.csv                    ← Mat ISC, 240 filas, sin choques, IS LA VERDAD para schedule.js
-AESTR_CORREGIDO_3.csv           ← Mat ISC, calificaciones por maestro, IS LA VERDAD para metrics.js
-IMG/VESP/horario_completo1.csv  ← Vesp ISC, 190 filas, sin choques, AÚN NO en schedule.js
-AESTR_VESPERTINO_plantilla.csv  ← Vesp ISC, plantilla VACÍA (105 maestros) para que el usuario califique
+horarios.csv                    ← Mat ISC, 240 filas, sin choques, IS LA VERDAD para schedule.js (parte M)
+AESTR_CORREGIDO_3.csv           ← Mat ISC, calificaciones por maestro, IS LA VERDAD para metrics.js (parte M)
+IMG/VESP/horario_completo1.csv  ← Vesp ISC, 190 filas, sin choques, YA en schedule.js (parte V)
+AESTR_VESPERTINO_plantilla.csv  ← Vesp ISC, calificaciones 105 maestros, YA en metrics.js (parte V)
 ```
 
 **Regla:** si el usuario corrige un CSV, hay que **regenerar** el `.js` correspondiente con PowerShell. Los `.js` son artefactos derivados.
@@ -49,9 +49,10 @@ Numeradas según las pidió el usuario. Todas ya implementadas en el código.
 
 1. **Auto-quitar del horario al aprobar.** Solo cuando status pasa a `aprobada` se borra del horario. Cualquier otra transición lo conserva.
 2. **Status DERIVADO de calif** (no hay select de status):
-   - `pendiente` = sin calif
+   - `pendiente` = sin calif (1ª vez)
+   - `🔁 En recurse` = sin calif + veces=2 (cursándola 2ª vez, aún sin pasar)
    - `aprobada` = calif ≥ 6
-   - `reprobada` = calif < 6
+   - `reprobada` = calif < 6 (veces=1) · `🔒 Bloqueada · sin 3.er intento` (veces=2)
    - Calif obligatoria solo si el usuario captura algo.
 3. **Calif = ENTERO 0–10**. Decimales → alert + borrar.
 4. **Métricas de profes son SOLO LECTURA** en pestaña Maestros. `Lo Recomiendan` muestra `%`.
@@ -62,7 +63,7 @@ Numeradas según las pidió el usuario. Todas ya implementadas en el código.
 6. (no usado, el usuario brincó del 5 al 7)
 7. **Dropdown único de orden** en pestaña Maestros (no flechas por columna).
 8. **Criterios de orden:** Maestro/Calidad/Recomiendan/Dificultad/Grupo/Semestre/Materia.
-9. **Resumen horario** muestra solo 4 tarjetas: Créditos inscritos · Materias inscritas · Calidad promedio · Dificultad promedio. **Bloqueo visual** si hay materia `reprobada` sin profe en el horario.
+9. **Resumen horario** muestra solo 4 tarjetas: Créditos inscritos · Materias inscritas · Calidad promedio · Dificultad promedio. (El recurse YA NO es obligatorio en el horario — se quitó el bloqueo visual que exigía meter reprobadas.)
 10. **Barra de avance continua** (no segmentada por semestre). Color cambia por % completado. No cuenta reprobadas.
 11. Espacios de la rejilla del horario: 78px alto, padding ~10px, line-clamp 2 en nombres.
 12. **Promedios** simples (no ponderados): solo Calidad y Dificultad. No mostrar Recomiendan.
@@ -70,23 +71,29 @@ Numeradas según las pidió el usuario. Todas ya implementadas en el código.
 14. **Botón "Borrar todo el horario"** con confirmación.
 15. **Pestaña Optativas** estilo ruta horizontal `6.° → 7.°` para las 14 ramas. Resalta la rama elegida con borde + ✓ ELEGIDA.
 16. **(Pendiente)** Filtro M / V en pestaña Maestros + carga del CSV vespertino.
-17. **Modo Auto en Generar Horario**:
-   - Inputs: hora entrada, hora salida, máx materias (1–9, default 7)
-   - Detecta semestre actual = lowest sem con pendientes
-   - Greedy ordenado por `puntaje = calidad×2 − dificultad`
-   - Solo pendientes del sem actual. Evita choques. Sobrescribe el horario.
+17. **Modo Auto en Generar Horario** (rediseñado):
+   - Inputs: turno (M/V/ambos), hora entrada, hora salida, máx materias (1–9, default 7).
+   - **Completar, no sobrescribir:** conserva lo que metiste a mano (entradas sin `_auto`); solo reemplaza lo auto-generado (`_auto:true`).
+   - **Cascada multi-semestre:** recorre TODOS los semestres de menor a mayor. Prioriza el semestre más bajo con pendientes, luego sube. Intercala semestres por compacidad pero el orden greedy garantiza que el menor se llena primero.
+   - **Créditos bloqueados cuentan:** `creditosBloqueados()` suma los créditos de materias bloqueadas (reprobada + veces≥2). Se restan de los 55 disponibles. `maxEfectivo = 55 − credBloq`.
+   - Optativas NO — se eligen a mano.
+   - **NO usa calidad/dificultad.** Búsqueda **aleatoria** (600 pasadas) que junta soluciones distintas; el pool se queda con las de **máximo de materias y mínimo de huecos** (`contarHuecos` sobre bloques). Respeta límite de créditos (no sobrepasa `maxEfectivo`).
+   - Botón **🎲 Otra opción** (`autoOtraBtn`): baraja otra combinación igual de compacta sin repetir la anterior.
+   - **Resultado muestra desglose por semestre** ("2 de 1.er sem, 3 de 2.° sem...").
+   - Las horas muertas solo se permiten en modo Manual.
 
 ### Diseño del flujo de status (importante, no obvio):
 
 - **No hay select de status manual.** Solo: input `calif` + select `veces cursada` (1 ó 2).
-- Si veces=2 y reprobada → **bloqueada** (badge rojo oscuro, profsBtn oculto, se borra del horario).
+- veces=1 sin calif → `Pendiente`; veces=2 sin calif → `🔁 En recurse` (badge `data-recurse="1"`).
+- Si veces=2 y reprobada → **bloqueada** (`🔒 sin 3.er intento`, badge rojo oscuro, profsBtn oculto, se borra del horario).
 - Si veces=2 y aprobada → "Aprobada (recurse)".
 - `tipo` en horario (`nueva` vs `recurse`) se infiere de `veces` (≥2 → recurse).
 
 ### Reglas de inscripción
 
-- Máx **55 créditos** por reinscripción.
-- Materias reprobadas suman créditos al total.
+- Máx **55 créditos** por reinscripción. Materias **bloqueadas** restan del tope (`maxEfectivo = 55 − creditosBloqueados()`).
+- La tarjeta de créditos muestra `inscritos / maxEfectivo` y un badge `(X cr bloq.)` si aplica.
 - **Misma materia no puede estar 2 veces** en el horario.
 - Una optativa por slot.
 
@@ -165,15 +172,17 @@ Cuando el usuario quiere actualizar un horario o calificaciones, el flujo SIEMPR
 - Pestaña Maestros: 6 colores, dropdown ordenamiento (8 criterios), materias toggleables verde/rojo, agregar materia manualmente
 - Pestaña Generar Horario: rejilla semanal + recesos + colores por materia + detección de choques + modo Auto
 - Pestaña Optativas: rutas estilo `6.° → 7.°` para las 14 ramas
-- Matutino ISC: 240 ofertas, 133 profes con calificaciones, **0 choques**
-- Vespertino ISC: 190 filas, **0 choques**, plantilla 105 profes lista para llenar
+- **TURNO VESPERTINO UNIFICADO** (todas las funciones):
+  - `schedule.js`: 430 ofertas (240 M + 190 V), **0 choques**
+  - `metrics.js`: 202 profes (M + V; correcciones BARRALES rec→14, TELLEZ BARRERA rec/dif invertidos)
+  - `roster.js`: extendido con 148 entradas vespertino (105 profes V)
+  - **P16**: filtro `Ambos / Matutino / Vespertino` en pestaña Maestros + badges M/V por maestro
+  - Modo Auto con selector de turno (ajusta ventana: M=07-15, V=12-21:30) y filtra ofertas por turno
+  - Materias regulares: el dropdown muestra ofertas M y V juntas (grupo identifica el turno)
+- **Optativas vespertinas:** NO tienen división A/B como matutino. `scheduleFor()` muestra TODAS las optativas V del semestre en ambos slots (A1/B1, A2/B2); matutino conserva su filtro A/B exacto por roster. Si ESCOM define un A/B oficial para V, pedirlo al usuario.
 
 ### ⏳ Pendiente
-1. Usuario debe llenar **`AESTR_VESPERTINO_plantilla.csv`** con calificaciones de los 105 profes V.
-2. Una vez llenas, **regenerar `metrics.js`** unificando M + V (~238 profes, algunos repetidos).
-3. **Unificar `schedule.js`** con horarios M + V.
-4. **P16**: Botón filtro `M / V / Ambos` en pestaña Maestros + modo Auto que respete turno.
-5. Eventualmente: **Ing. en IA** (códigos `XAM/XAV`) e **Lic. Cs. Datos** (`XBM/XBV`).
+1. Eventualmente: **Ing. en IA** (códigos `XAM/XAV`) e **Lic. Cs. Datos** (`XBM/XBV`).
 
 ---
 

@@ -220,7 +220,17 @@ select.st[data-st="reprobada"] { background-color: var(--bg-repr); color: var(--
 .status-badge[data-st="pendiente"] { background: var(--bg-pend); color: var(--ink-soft); }
 .status-badge[data-st="aprobada"]  { background: var(--bg-apro); color: var(--c-apro); }
 .status-badge[data-st="reprobada"] { background: var(--bg-repr); color: var(--c-repr); }
+.status-badge[data-recurse="1"]    { background: #fdedcf; color: #b45309; }
 .status-badge[data-blocked="1"]    { background: #7f1d1d; color: #fff; }
+
+/* Chip de turno en las tarjetas de oferta (dropdown de inscripción) */
+.tchip {
+  display: inline-block; vertical-align: middle;
+  font-family: var(--display); font-weight: 700; font-size: 10px;
+  padding: 2px 7px; border-radius: 999px; white-space: nowrap;
+}
+.tchip.tm { background: #fdedcf; color: #b45309; }
+.tchip.tv { background: #e0e2fb; color: #4338ca; }
 
 .veces {
   -webkit-appearance: none; appearance: none; cursor: pointer;
@@ -250,6 +260,26 @@ select.st[data-st="reprobada"] { background-color: var(--bg-repr); color: var(--
 }
 #sortProf:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
+/* P16: filtro de turno en Maestros */
+.turno-filter { display: inline-flex; gap: 4px; background: var(--bg-pend); border-radius: 999px; padding: 3px; }
+.turno-btn {
+  border: none; background: transparent; cursor: pointer;
+  border-radius: 999px; padding: 7px 13px;
+  font-family: var(--body); font-weight: 600; font-size: 12.5px; color: var(--ink-soft);
+  transition: background .15s, color .15s;
+}
+.turno-btn:hover { color: var(--ink); }
+.turno-btn.active { background: var(--card); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+/* Badges de turno junto al nombre del maestro */
+.tbadge {
+  display: inline-block; margin-left: 6px; vertical-align: middle;
+  font-family: var(--display); font-weight: 700; font-size: 10px; line-height: 1;
+  padding: 3px 6px; border-radius: 5px;
+}
+.tbadge.tm { background: #fdedcf; color: #b45309; }
+.tbadge.tv { background: #e0e2fb; color: #4338ca; }
+
 /* P12: colores del valor de promedio en tarjetas */
 .cs-val.color-g1 { color: #15803d; }
 .cs-val.color-g2 { color: #4d7c0f; }
@@ -257,12 +287,6 @@ select.st[data-st="reprobada"] { background-color: var(--bg-repr); color: var(--
 .cs-val.color-o1 { color: #c2410c; }
 .cs-val.color-r1 { color: #b91c1c; }
 .cs-val.color-r2 { color: #7f1d1d; }
-
-/* P9: aviso bloqueante */
-.over-warn.block-warn {
-  background: var(--bg-repr); color: var(--c-repr);
-  border: 2px solid var(--c-repr); font-weight: 600;
-}
 
 /* P15: Pestaña Optativas con rutas */
 .pane-title { font-family: var(--display); font-weight: 700; font-size: 22px; margin-bottom: 6px; }
@@ -480,6 +504,7 @@ select.st[data-st="reprobada"] { background-color: var(--bg-repr); color: var(--
   font-size: 11.5px; color: var(--ink-soft); margin-top: 8px; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.04em;
 }
+.cs-bloq { font-size: .7rem; color: #dc2626; font-weight: 700; text-transform: none; }
 .over-warn {
   width: 100%; background: var(--bg-repr); color: var(--c-repr); font-weight: 600; font-size: 13px;
   padding: 12px 16px; border-radius: 10px; margin-top: 10px; line-height: 1.5;

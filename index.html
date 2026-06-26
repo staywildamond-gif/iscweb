@@ -72,6 +72,11 @@
         <p class="pane-sub"><b id="profCount">0</b> maestros en total. Métricas tomadas del registro oficial (solo lectura).</p>
         <div class="profs-toolbar">
           <input class="search" id="searchProf" type="text" placeholder="Buscar maestro o materia…" aria-label="Buscar maestro">
+          <div class="turno-filter" id="turnoFilter" role="group" aria-label="Filtrar por turno">
+            <button class="turno-btn active" data-turno="ambos">Ambos</button>
+            <button class="turno-btn" data-turno="M">☀️ Matutino</button>
+            <button class="turno-btn" data-turno="V">🌙 Vespertino</button>
+          </div>
           <label class="sort-wrap">Ordenar por:
             <select id="sortProf">
               <optgroup label="Maestro">
@@ -125,6 +130,13 @@
         </div>
         <div class="auto-config" data-mode="auto" hidden>
           <div class="auto-row">
+            <label>Turno
+              <select id="autoTurno">
+                <option value="M">☀️ Matutino</option>
+                <option value="V">🌙 Vespertino</option>
+                <option value="ambos">Ambos</option>
+              </select>
+            </label>
             <label>Hora entrada
               <input type="time" id="autoEntrada" value="07:00" step="1800">
             </label>
@@ -135,8 +147,9 @@
               <input type="number" id="autoMax" min="1" max="9" value="7">
             </label>
             <button id="autoGenBtn" class="btn-primary">Generar horario automático</button>
+            <button id="autoOtraBtn" class="btn" hidden>🎲 Otra opción</button>
           </div>
-          <div class="auto-hint">Toma las materias pendientes del semestre actual (el más bajo sin todas aprobadas) y elige el grupo que mejor cuadre en tu ventana de tiempo y máx créditos. Puedes editar después.</div>
+          <div class="auto-hint"><b>Completa</b> lo que ya metiste a mano: conserva tus materias y agrega las que te <b>faltan</b>, empezando por el semestre más bajo con pendientes y subiendo. Las cuadra dentro de tu ventana de tiempo, <b>sin horas muertas</b> y de forma <b>aleatoria</b> (sin importar calidad del maestro). Créditos de materias <b>bloqueadas</b> reducen tu capacidad. Pulsa <b>🎲 Otra opción</b> para barajar.</div>
           <div class="auto-result" id="autoResult"></div>
         </div>
       </div>
