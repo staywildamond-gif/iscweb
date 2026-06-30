@@ -249,14 +249,112 @@ function estaInscrita(id) {
   return state.horario.some((h) => h.sid === id);
 }
 
+// CSV manual de maestros (gana sobre TEACHER_METRICS, pero si falta cae al seed).
+// Se llena con fetch() de maestros_manual.csv al cargar la página.
+const MANUAL_METRICS = {};      // nombre exacto → {calidad, recomiendan, dificultad, link}
+const MANUAL_METRICS_NORM = {}; // norm(nombre) → mismo objeto (fallback por normalización)
+
+function manualMetricFor(name) {
+  return MANUAL_METRICS[name] || MANUAL_METRICS_NORM[norm(name)] || null;
+}
+
 function getMetric(name) {
   const seed = (typeof TEACHER_METRICS !== "undefined" && TEACHER_METRICS[name]) || {};
+  const man = manualMetricFor(name) || {};
   const o = state.metrics[name] || {};
   const pick = (k) =>
-    o[k] !== undefined && o[k] !== null ? o[k]
-    : seed[k] !== undefined && seed[k] !== null ? seed[k]
+    o[k] !== undefined && o[k] !== null && o[k] !== "" ? o[k]
+    : man[k] !== undefined && man[k] !== null && man[k] !== "" ? man[k]
+    : seed[k] !== undefined && seed[k] !== null && seed[k] !== "" ? seed[k]
     : "";
   return { calidad: pick("calidad"), recomiendan: pick("recomiendan"), dificultad: pick("dificultad") };
+}
+
+// Parser CSV mínimo (soporta campos entrecomillados con comas adentro).
+function parseCSVLine(line) {
+  const out = []; let cur = ""; let q = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (q) {
+      if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+      else if (c === '"') { q = false; }
+      else cur += c;
+    } else {
+      if (c === ',') { out.push(cur); cur = ""; }
+      else if (c === '"') { q = true; }
+      else cur += c;
+    }
+  }
+  out.push(cur);
+  return out.map((s) => s.trim());
+}
+
+// Registra un override manual; mergea si ya existía (gana lo que traiga dato)
+function registerManual(name, obj) {
+  if (obj.calidad === "" && obj.recomiendan === "" && obj.dificultad === "" && !obj.link) return;
+  const prev = MANUAL_METRICS[name] || {};
+  const merged = {
+    calidad:     obj.calidad     !== "" ? obj.calidad     : (prev.calidad ?? ""),
+    recomiendan: obj.recomiendan !== "" ? obj.recomiendan : (prev.recomiendan ?? ""),
+    dificultad:  obj.dificultad  !== "" ? obj.dificultad  : (prev.dificultad ?? ""),
+    link:        obj.link || prev.link || "",
+  };
+  MANUAL_METRICS[name] = merged;
+  MANUAL_METRICS_NORM[norm(name)] = merged;
+}
+
+function refreshAfterManual() {
+  if (document.querySelector("#pane-maestros.active")) renderProfs();
+  if (document.querySelector("#pane-plan.active") && typeof render === "function") render();
+  if (currentProfDetail && profDetailEl && !profDetailEl.hidden) showProfDetail(currentProfDetail);
+}
+
+function loadManualMetrics() {
+  // 1) Fuente principal: maestros_manual.js (cargado con <script>).
+  //    Funciona SIEMPRE, incluso abriendo el HTML sin servidor (file://).
+  if (typeof MANUAL_LINKS !== "undefined" && MANUAL_LINKS) {
+    Object.keys(MANUAL_LINKS).forEach((name) => {
+      const v = MANUAL_LINKS[name];
+      const link = typeof v === "string" ? v : (v && v.link) || "";
+      const cal  = (v && v.calidad     != null) ? v.calidad     : "";
+      const rec  = (v && v.recomiendan != null) ? v.recomiendan : "";
+      const dif  = (v && v.dificultad  != null) ? v.dificultad  : "";
+      registerManual(name, { calidad: cal, recomiendan: rec, dificultad: dif, link });
+    });
+    refreshAfterManual();
+  }
+
+  // 2) Mejora opcional: si se sirve por http, relee el CSV en vivo (sin regenerar el .js).
+  //    En file:// esto falla y se ignora silenciosamente.
+  if (!location.protocol.startsWith("http")) return;
+  fetch("maestros_manual.csv?t=" + Date.now(), { cache: "no-store" })
+    .then((r) => r.ok ? r.text() : "")
+    .then((txt) => {
+      if (!txt) return;
+      const lines = txt.split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#"));
+      if (lines.length < 2) return;
+      const header = parseCSVLine(lines[0]).map((h) => h.toLowerCase());
+      const iName = header.indexOf("nombre");
+      const iCal  = header.indexOf("calidad");
+      const iRec  = header.indexOf("recomiendan");
+      const iDif  = header.indexOf("dificultad");
+      const iLnk  = header.indexOf("link_fuente");
+      if (iName < 0) return;
+      for (let li = 1; li < lines.length; li++) {
+        const f = parseCSVLine(lines[li]);
+        const name = (f[iName] || "").trim();
+        if (!name) continue;
+        const num = (x) => { const n = parseFloat(x); return Number.isFinite(n) ? n : ""; };
+        registerManual(name, {
+          calidad:     iCal >= 0 ? num(f[iCal]) : "",
+          recomiendan: iRec >= 0 ? num(f[iRec]) : "",
+          dificultad:  iDif >= 0 ? num(f[iDif]) : "",
+          link:        iLnk >= 0 ? (f[iLnk] || "").trim() : "",
+        });
+      }
+      refreshAfterManual();
+    })
+    .catch(() => { /* silencioso: el CSV es opcional */ });
 }
 
 function setMetric(name, patch) {
@@ -653,7 +751,7 @@ function renderDrop(drop, s, i) {
         return `
         <div class="tcard">
           <div class="tcard-main">
-            <div class="tcard-name">${esc(e.profesor)} ${turnoChip}</div>
+            <div class="tcard-name"><a href="#" class="prof-link" data-prof="${esc(e.profesor)}">${esc(e.profesor)}</a> ${turnoChip}</div>
             <div class="tcard-grupo">${esc(e.grupo)} · Ed. ${esc(e.edificio)} · Salón ${esc(e.salon)}${rama ? ` · <b>${esc(titleCase(rama))}</b>` : ""}</div>
             <div class="tcard-sesiones">${esc(sesionesText(e.sesiones))}</div>
             ${miniMetrics(m)}
@@ -664,6 +762,10 @@ function renderDrop(drop, s, i) {
         </div>`;
       }).join("")}
     </div>`;
+
+  drop.querySelectorAll(".prof-link").forEach((a) => {
+    a.onclick = (e) => { e.preventDefault(); showProfDetail(a.dataset.prof); };
+  });
 
   drop.querySelectorAll(".addBtn").forEach((btn) => {
     btn.onclick = () => {
@@ -900,13 +1002,17 @@ function renderProfs() {
   profsBody.innerHTML = rows.map((r) => `
     <tr>
       <td>
-        <div class="pname">${esc(r.name)}${turnoBadges(r.grupos)}</div>
+        <div class="pname"><a href="#" class="prof-link" data-prof="${esc(r.name)}">${esc(r.name)}</a>${turnoBadges(r.grupos)}</div>
         ${matsCellHTML(r.name)}
       </td>
       <td>${metricCell(r.calidad, "cal")}</td>
       <td>${metricCell(r.recomiendan, "rec")}</td>
       <td>${metricCell(r.dificultad, "dif")}</td>
     </tr>`).join("");
+
+  profsBody.querySelectorAll(".prof-link").forEach((a) => {
+    a.onclick = (e) => { e.preventDefault(); showProfDetail(a.dataset.prof); };
+  });
 
   // etiquetas de materia: clic = activa/inactiva (verde/rojo)
   profsBody.querySelectorAll(".mtag").forEach((tag) => {
@@ -974,6 +1080,186 @@ sortProfEl.addEventListener("change", () => {
   const [key, dir] = sortProfEl.value.split("|");
   profSort = { key, dir };
   renderProfs();
+});
+
+// ----- Vista detalle de maestro (full-page dentro de pestaña Maestros) -----
+const profDetailEl  = document.getElementById("profDetail");
+const profsListWrap = document.getElementById("profsListWrap");
+const profsPaneHead = document.querySelector("#pane-maestros .pane-head");
+let currentProfDetail = null; // maestro cuyo detalle está abierto (para repintar al cargar el CSV)
+
+function ofertasDeMaestro(name) {
+  const sched = typeof SCHEDULE !== "undefined" ? SCHEDULE : [];
+  return sched.filter((e) => e.profesor === name);
+}
+
+// Rejilla semanal del maestro: misma estructura que la del alumno,
+// con TODOS los bloques 07:00–21:30 + recesos 10:00–10:30 y 18:00–18:30.
+function renderProfSchedGrid(ofertas) {
+  // Colores estables por materia/grupo
+  const colorOf = new Map();
+  const keyOf = (o) => `${o.materia}__${o.grupo}`;
+  ofertas.forEach((o) => {
+    const k = keyOf(o);
+    if (!colorOf.has(k)) colorOf.set(k, SCHED_COLORS[colorOf.size % SCHED_COLORS.length]);
+  });
+
+  const blockIdx = (ini) => TIME_BLOCKS.findIndex((b) => b.ini === ini);
+
+  // Recortar a los bloques realmente ocupados
+  const occupied = new Set();
+  ofertas.forEach((o) => (o.sesiones || []).forEach((s) => {
+    const k = blockIdx(s.ini);
+    if (k >= 0) occupied.add(k);
+  }));
+  if (occupied.size === 0) {
+    return `<div class="drop-empty">Sin sesiones en bloques estándar.</div>`;
+  }
+  const minIdx = Math.min(...occupied);
+  const maxIdx = Math.max(...occupied);
+
+  let html = `<table class="sched-table"><thead><tr>
+    <th class="sched-hora">Hora</th>
+    ${DIAS.map((d) => `<th>${d.toUpperCase()}</th>`).join("")}
+  </tr></thead><tbody>`;
+
+  for (let i = minIdx; i <= maxIdx; i++) {
+    const b = TIME_BLOCKS[i];
+    html += `<tr><th class="sched-hora">${b.ini}<br>${b.fin}</th>`;
+    DIAS.forEach((d) => {
+      const items = [];
+      ofertas.forEach((o) => {
+        (o.sesiones || []).forEach((s) => {
+          if (s.dia === d && s.ini === b.ini) items.push(o);
+        });
+      });
+      const conflict = items.length > 1;
+      if (items.length === 0) {
+        html += `<td class="sched-empty"></td>`;
+      } else {
+        const inner = items.map((o) => {
+          const c = colorOf.get(keyOf(o));
+          const salonEd = `Ed.${esc(String(o.edificio || "—"))} · S.${esc(String(o.salon || "—"))}`;
+          return `<div class="sched-cell" style="background:${c.bg};color:${c.fg};border-color:${c.bd}" title="${esc(titleCase(o.materia))} · ${esc(o.grupo)} · ${salonEd}">
+            <div class="sched-mat">${esc(shortMat(o.materia))}</div>
+            <div class="sched-meta"><b>${esc(o.grupo)}</b> · ${salonEd}</div>
+          </div>`;
+        }).join("");
+        html += `<td class="${conflict ? "sched-conflict" : ""}">${inner}</td>`;
+      }
+    });
+    html += `</tr>`;
+    if (b.ini === "08:30" && i < maxIdx) {
+      html += `<tr class="sched-receso"><td colspan="${DIAS.length + 1}">☕ Receso 10:00 – 10:30</td></tr>`;
+    }
+    if (b.ini === "16:30" && i < maxIdx) {
+      html += `<tr class="sched-receso"><td colspan="${DIAS.length + 1}">☕ Receso 18:00 – 18:30</td></tr>`;
+    }
+  }
+  html += `</tbody></table>`;
+  return html;
+}
+
+const DIAS_ORDEN = { Lun:1, Mar:2, Mie:3, Mié:3, Jue:4, Vie:5, Sab:6, Sáb:6, Dom:7 };
+
+function showProfDetail(name) {
+  // Asegura que estemos en la pestaña Maestros
+  document.querySelectorAll(".tab").forEach((b) =>
+    b.classList.toggle("active", b.dataset.tab === "maestros"));
+  document.querySelectorAll(".tabpane").forEach((p) =>
+    p.classList.toggle("active", p.id === "pane-maestros"));
+
+  if (profsPaneHead) profsPaneHead.hidden = true;
+  if (profsListWrap) profsListWrap.hidden = true;
+  profDetailEl.hidden = false;
+  currentProfDetail = name;
+
+  const m = getMetric(name);
+  const man = manualMetricFor(name);
+  const link = man && man.link ? man.link : "";
+
+  const ofertas = ofertasDeMaestro(name);
+  const turnos = new Set(ofertas.map((o) => turnoDeGrupo(o.grupo)).filter(Boolean));
+  const turnoLabel = turnos.size === 0 ? "—"
+    : turnos.has("M") && turnos.has("V") ? "Mixto (M + V)"
+    : turnos.has("M") ? "☀️ Matutino" : "🌙 Vespertino";
+
+  const tablaHTML = ofertas.length === 0
+    ? `<div class="drop-empty">Este maestro no tiene clases registradas este semestre.</div>`
+    : renderProfSchedGrid(ofertas);
+
+  profDetailEl.innerHTML = `
+    <div class="pd-head">
+      <button class="btn pd-back" id="profBack">← Volver a la lista</button>
+      <div class="pd-title-wrap">
+        <h2 class="pd-title">${esc(name)}</h2>
+        <div class="pd-sub">
+          <span class="pd-turno">${turnoLabel}</span>
+          ${link ? `· <a href="${esc(link)}" target="_blank" rel="noopener" class="pd-link">🔗 Fuente</a>` : ""}
+          ${man ? `<span class="pd-tag manual" title="Calificaciones del CSV manual">manual</span>` : `<span class="pd-tag oficial" title="Calificaciones de metrics.js">oficial</span>`}
+        </div>
+      </div>
+    </div>
+
+    <div class="pd-metrics">
+      <div class="pd-m"><div class="pd-m-label">Calidad</div>${metricCell(m.calidad, "cal")}</div>
+      <div class="pd-m"><div class="pd-m-label">Lo recomiendan</div>${metricCell(m.recomiendan, "rec")}</div>
+      <div class="pd-m"><div class="pd-m-label">Dificultad</div>${metricCell(m.dificultad, "dif")}</div>
+    </div>
+
+    <h3 class="pd-section">Horario semanal</h3>
+    ${tablaHTML}
+
+    <h3 class="pd-section">Fuentes</h3>
+    ${fuentesHTML(link)}
+  `;
+
+  document.getElementById("profBack").onclick = hideProfDetail;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// Nombre legible del sitio a partir del dominio del link
+function siteLabel(link) {
+  try {
+    const host = new URL(link).hostname.replace(/^www\./, "");
+    if (/misprofesores/i.test(host)) return "MisProfesores.com";
+    return host;
+  } catch (e) { return "Fuente"; }
+}
+
+// Apartado "Fuentes": link completo y clickeable del maestro
+function fuentesHTML(link) {
+  if (!link) {
+    return `<div class="drop-empty">Sin fuente registrada para este maestro.</div>`;
+  }
+  return `<ul class="pd-fuentes">
+    <li>
+      <a href="${esc(link)}" target="_blank" rel="noopener" class="pd-fuente">
+        <span class="pd-fuente-ico">🔗</span>
+        <span class="pd-fuente-txt">
+          <b>${esc(siteLabel(link))}</b>
+          <span class="pd-fuente-url">${esc(link)}</span>
+        </span>
+        <span class="pd-fuente-go">Abrir ↗</span>
+      </a>
+    </li>
+  </ul>`;
+}
+
+function hideProfDetail() {
+  currentProfDetail = null;
+  profDetailEl.hidden = true;
+  profDetailEl.innerHTML = "";
+  if (profsPaneHead) profsPaneHead.hidden = false;
+  if (profsListWrap) profsListWrap.hidden = false;
+}
+
+// Al cambiar de pestaña vía botones, si salimos de maestros, reset del detalle
+tabsEl.querySelectorAll(".tab").forEach((btn) => {
+  const prev = btn.onclick;
+  btn.addEventListener("click", () => {
+    if (btn.dataset.tab !== "maestros") hideProfDetail();
+  });
 });
 
 // P16: filtro por turno (Ambos / Matutino / Vespertino)
@@ -1073,13 +1359,17 @@ function renderHorario() {
           <span class="hcard-cred">${fmt(h.cred)} cr</span>
           ${hasConflict ? `<span class="conflict-tag">⚠ Choque</span>` : ""}
         </div>
-        <div class="hcard-prof">${esc(h.maestro)} · <span class="hcard-grupo">${esc(h.grupo || "")}${aula ? " · " + aula : ""}</span></div>
+        <div class="hcard-prof"><a href="#" class="prof-link" data-prof="${esc(h.maestro)}">${esc(h.maestro)}</a> · <span class="hcard-grupo">${esc(h.grupo || "")}${aula ? " · " + aula : ""}</span></div>
         ${h.sesiones && h.sesiones.length ? `<div class="hcard-ses">${esc(sesionesText(h.sesiones))}</div>` : ""}
         ${miniMetrics(m)}
       </div>
       <button class="hdel" data-idx="${idx}" title="Quitar del horario">✕</button>
     </div>`;
   }).join("");
+
+  horarioListEl.querySelectorAll(".prof-link").forEach((a) => {
+    a.onclick = (e) => { e.preventDefault(); showProfDetail(a.dataset.prof); };
+  });
 
   horarioListEl.querySelectorAll(".hdel").forEach((btn) => {
     btn.onclick = () => {
@@ -1591,15 +1881,8 @@ function aplicarSolucionAuto() {
   let html = `<div class="auto-ok">✅ Agregué <b>${colocadas}</b> materia(s): ${resumenSems}. ` +
     `Horario: <b>${state.horario.length}</b> materias · ${fmt(totalCred)} créditos · ` +
     `<b>${sol.huecos === 0 ? "sin horas muertas" : sol.huecos + " hueco(s)"}</b>.</div>`;
-  html += `<div class="auto-hint">Ventana de inscripción: <b>${PLAN[autoCtx.minSem].sem} → ${PLAN[autoCtx.maxSem].sem}</b> (máx ${VENTANA_SEM} semestres).</div>`;
   if (sinFit > 0) {
     html += `<div class="auto-warn">⚠️ ${sinFit} materia(s) no cupieron sin chocar en tu ventana de horas. Amplía el horario o agrégalas a mano.</div>`;
-  }
-  if (autoCtx.bloqueadasSer > 0) {
-    html += `<div class="auto-warn">🔒 ${autoCtx.bloqueadasSer} materia(s) bloqueada(s) por seriación (te falta aprobar su prerequisito).</div>`;
-  }
-  if (autoCtx.fueraVentana > 0) {
-    html += `<div class="auto-hint">↑ ${autoCtx.fueraVentana} materia(s) quedaron fuera de la ventana de ${VENTANA_SEM} semestres (de ${PLAN[Math.min(autoCtx.maxSem + 1, PLAN.length - 1)].sem} en adelante). Aparecerán cuando avances.</div>`;
   }
   if (autoPool.length > 1) {
     html += `<div class="auto-hint">¿No te convence? Pulsa <b>🎲 Otra opción</b> para barajar otra combinación igual de compacta.</div>`;
@@ -1678,3 +1961,4 @@ try {
 }
 
 render();
+loadManualMetrics();
