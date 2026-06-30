@@ -40,6 +40,58 @@ const PLAN = [
 ];
 
 // ============================================================
+//  DIFICULTAD POR MATERIA (promedio real de profes M+V, escala 0–6 → 1–10)
+// ============================================================
+const SUBJECT_DIFFICULTY = {
+  "CALCULO": 6.5, "ANALISIS VECTORIAL": 6.6, "MATEMATICAS DISCRETAS": 6.9,
+  "COMUNICACION ORAL Y ESCRITA": 2.6, "FUNDAMENTOS DE PROGRAMACION": 5.9,
+  "ALGORITMOS Y ESTRUCTURA DE DATOS": 5.2, "ALGEBRA LINEAL": 6.5,
+  "CALCULO APLICADO": 6.6, "MECANICA Y ELECTROMAGNETISMO": 5.5,
+  "INGENIERIA ETICA Y SOCIEDAD": 4.0, "FUNDAMENTOS ECONOMICOS": 4.5,
+  "ECUACIONES DIFERENCIALES": 5.8, "CIRCUITOS ELECTRICOS": 6.0,
+  "FUNDAMENTOS DE DISENO DIGITAL": 6.0, "BASES DE DATOS": 5.2,
+  "FINANZAS EMPRESARIALES": 4.4, "PARADIGMAS DE PROGRAMACION": 4.5,
+  "ANALISIS Y DISENO DE ALGORITMOS": 4.9,
+  "TEORIA DE LA COMPUTACION": 4.1, "PROBABILIDAD Y ESTADISTICA": 5.7,
+  "MATEMATICAS AVANZADAS PARA LA INGENIERIA": 6.9,
+  "DISENO DE SISTEMAS DIGITALES": 8.0, "ELECTRONICA ANALOGICA": 6.5,
+  "TECNOLOGIAS PARA DESARROLLO DE APLICACIONES WEB": 4.6,
+  "SISTEMAS OPERATIVOS": 5.2, "COMPILADORES": 5.6,
+  "PROCESAMIENTO DIGITAL DE SENALES": 5.9,
+  "ARQUITECTURA DE COMPUTADORAS": 6.8, "INSTRUMENTACION Y CONTROL": 5.6,
+  "ANALISIS Y DISENO DE SISTEMAS": 4.6,
+  "FORMULACION Y EVALUACION DE PROYECTOS INFORMATICOS": 5.2,
+  "REDES DE COMPUTADORAS": 5.6, "INTELIGENCIA ARTIFICIAL": 4.6,
+  "SISTEMAS EN CHIP": 5.7,
+  "METODOS CUANTITATIVOS PARA LA TOMA DE DECISIONES": 2.8,
+  "INGENIERIA DE SOFTWARE": 3.8,
+  "APLICACIONES PARA COMUNICACIONES EN RED": 5.5,
+  "OPTATIVA A1": 5.5, "OPTATIVA B1": 4.1,
+  "TRABAJO TERMINAL I": 5.0, "SISTEMAS DISTRIBUIDOS": 5.5,
+  "DESARROLLO DE APLICACIONES MOVILES NATIVAS": 5.2,
+  "ADMINISTRACION DE SERVICIOS EN RED": 4.0,
+  "OPTATIVA A2": 5.3, "OPTATIVA B2": 6.1,
+  "TRABAJO TERMINAL II": 5.5, "LIDERAZGO PERSONAL": 2.6,
+  "GESTION EMPRESARIAL": 3.5, "ESTANCIA PROFESIONAL": 2.0,
+  "DESARROLLO DE HABILIDADES SOCIALES PARA LA ALTA DIRECCION": 2.8,
+};
+
+function difLevel(d) {
+  if (d >= 8)   return "brutal";
+  if (d >= 6.5) return "pesada";
+  if (d >= 5)   return "moderada";
+  if (d >= 3.5) return "llevadera";
+  return "relajada";
+}
+
+function difBadge(name) {
+  const k = norm(name);
+  const d = SUBJECT_DIFFICULTY[k];
+  if (d == null) return "";
+  return `<span class="diftag" data-dif="${difLevel(d)}">${d.toFixed(1)}</span>`;
+}
+
+// ============================================================
 //  CONSTANTES
 // ============================================================
 const STATES = { pendiente: "Pendiente", aprobada: "Aprobada", reprobada: "Reprobada" };
@@ -180,15 +232,21 @@ function creditosBloqueados() {
 }
 
 // Texto del badge de estado
-function statusBadgeText(rec) {
+function statusBadgeText(rec, inscrita) {
   if (rec.status === "aprobada") return rec.veces === 2 ? "Aprobada (recurse)" : "Aprobada";
   if (rec.status === "reprobada") return rec.veces >= 2 ? "🔒 Bloqueada · sin 3.er intento" : "Reprobada";
-  // pendiente: distingue 1ª vez de recurse en curso (2ª vez sin calif)
+  // pendiente: si ya está en el horario, mostrar "Inscrita"
+  if (inscrita) return rec.veces >= 2 ? "🔁 Inscrita (recurse)" : "Inscrita";
+  // pendiente sin inscribir: distingue 1ª vez de recurse en curso (2ª vez sin calif)
   return rec.veces >= 2 ? "🔁 En recurse" : "Pendiente";
 }
 // ¿La materia está en recurse en curso? (2ª vez, aún sin calificar)
 function esEnRecurse(rec) {
   return rec.status === "pendiente" && rec.veces >= 2;
+}
+// ¿La materia (por id) está inscrita en el horario?
+function estaInscrita(id) {
+  return state.horario.some((h) => h.sid === id);
 }
 
 function getMetric(name) {
@@ -392,6 +450,7 @@ tabsEl.querySelectorAll(".tab").forEach((btn) => {
     document.querySelectorAll(".tabpane").forEach((p) => {
       p.classList.toggle("active", p.id === "pane-" + tab);
     });
+    if (tab === "plan") render();
     if (tab === "maestros") renderProfs();
     if (tab === "horario") renderHorario();
     if (tab === "optativas") renderOptativas();
@@ -447,7 +506,7 @@ PLAN.forEach((blk, s) => {
 
     subj.innerHTML = `
       <div class="row">
-        <span class="name">${esc(rec.name)}${isOpt ? `<span class="opttag">${OPT_SLOTS[id].label}</span>` : ""}</span>
+        <span class="name">${esc(rec.name)}${isOpt ? `<span class="opttag">${OPT_SLOTS[id].label}</span>` : ""}${difBadge(name)}</span>
         <span class="cred">${cred}</span>
         <div class="row-controls">
           <select class="veces" aria-label="Veces cursada de ${esc(name)}">
@@ -456,7 +515,7 @@ PLAN.forEach((blk, s) => {
           </select>
           <input class="calif" type="number" min="0" max="10" step="1" placeholder="Cal"
                  value="${esc(rec.calif)}" aria-label="Calificación de ${esc(name)}">
-          <span class="status-badge" data-st="${rec.status}" data-blocked="${rec.status === "reprobada" && rec.veces >= 2 ? "1" : "0"}" data-recurse="${esEnRecurse(rec) ? "1" : "0"}">${statusBadgeText(rec)}</span>
+          <span class="status-badge" data-st="${rec.status}" data-blocked="${rec.status === "reprobada" && rec.veces >= 2 ? "1" : "0"}" data-recurse="${esEnRecurse(rec) ? "1" : "0"}" data-inscrita="${rec.status === "pendiente" && estaInscrita(id) ? "1" : "0"}">${statusBadgeText(rec, estaInscrita(id))}</span>
           <button class="profsBtn" type="button">Maestros <span class="caret">▾</span></button>
         </div>
       </div>
@@ -546,13 +605,16 @@ PLAN.forEach((blk, s) => {
 
 // Muestra calif (aprobada/reprobada) u oculta; el botón Maestros aparece en pendiente y reprobada
 function applyRowMode(subj, rec) {
+  const id = subj.dataset.id;
+  const inscrita = rec.status === "pendiente" && estaInscrita(id);
   const profsBtn = subj.querySelector(".profsBtn");
   const badge = subj.querySelector(".status-badge");
   const isBlocked = rec.status === "reprobada" && rec.veces >= 2;
   badge.dataset.st = rec.status;
   badge.dataset.blocked = isBlocked ? "1" : "0";
   badge.dataset.recurse = esEnRecurse(rec) ? "1" : "0";
-  badge.textContent = statusBadgeText(rec);
+  badge.dataset.inscrita = inscrita ? "1" : "0";
+  badge.textContent = statusBadgeText(rec, inscrita);
   // Profes solo visible si se puede inscribir
   const inscribible = canInscribir(rec);
   profsBtn.classList.toggle("hidden", !inscribible);
@@ -668,6 +730,9 @@ function toggleHorario(item, btn) {
     if (btn) { btn.classList.add("added"); btn.textContent = "✓ En horario"; }
   }
   save();
+  // Refrescar el badge de la materia en la pestaña Mi avance (Pendiente ⇄ Inscrita)
+  const subj = planEl.querySelector(`.subject[data-id="${item.sid}"]`);
+  if (subj) applyRowMode(subj, getSub(item.sid));
 }
 
 // ============================================================
@@ -725,7 +790,19 @@ function render() {
     c.setAttribute("aria-pressed", c.dataset.k === filter);
   });
 
+  refreshBadges();
   applyFilters();
+}
+
+// Re-aplica el estado de cada fila (incluye el badge Pendiente ⇄ Inscrita)
+function refreshBadges() {
+  planEl.querySelectorAll(".subject").forEach((subj) => {
+    const id = subj.dataset.id;
+    const m = id && id.match(/^s(\d+)-(\d+)$/);
+    if (!m) return;
+    const name = PLAN[+m[1]].materias[+m[2]][0];
+    applyRowMode(subj, getSub(id, name));
+  });
 }
 
 // ---- Filtros ----
@@ -1264,6 +1341,69 @@ function detectarSemestreObjetivo(base) {
   return detectarSemestreActual();
 }
 
+// ============================================================
+//  SERIACIÓN (linealidad del plan, según la imagen del mapa curricular)
+//  dependiente → [prerequisito(s)]. La dependiente SOLO se puede meter en
+//  modo Auto si TODOS sus prerequisitos están APROBADOS (si alguno está
+//  reprobado o pendiente, se bloquea). Excepción del usuario marcada (★).
+// ============================================================
+const SERIACION = {
+  "CALCULO APLICADO": ["CALCULO"],
+  "ALGEBRA LINEAL": ["ANALISIS VECTORIAL"],                                   // ★ excepción (no Mecánica)
+  "ALGORITMOS Y ESTRUCTURA DE DATOS": ["FUNDAMENTOS DE PROGRAMACION"],
+  "ECUACIONES DIFERENCIALES": ["CALCULO APLICADO"],
+  "CIRCUITOS ELECTRICOS": ["MECANICA Y ELECTROMAGNETISMO"],
+  "ANALISIS Y DISENO DE ALGORITMOS": ["ALGORITMOS Y ESTRUCTURA DE DATOS"],
+  "PARADIGMAS DE PROGRAMACION": ["ALGORITMOS Y ESTRUCTURA DE DATOS"],
+  "ELECTRONICA ANALOGICA": ["CIRCUITOS ELECTRICOS"],
+  "DISENO DE SISTEMAS DIGITALES": ["FUNDAMENTOS DE DISENO DIGITAL"],
+  "TEORIA DE LA COMPUTACION": ["ANALISIS Y DISENO DE ALGORITMOS"],
+  "TECNOLOGIAS PARA DESARROLLO DE APLICACIONES WEB": ["BASES DE DATOS"],
+  "MATEMATICAS AVANZADAS PARA LA INGENIERIA": ["ECUACIONES DIFERENCIALES"],
+  "ARQUITECTURA DE COMPUTADORAS": ["DISENO DE SISTEMAS DIGITALES"],
+  "COMPILADORES": ["ANALISIS Y DISENO DE ALGORITMOS"],
+  "INSTRUMENTACION Y CONTROL": ["ELECTRONICA ANALOGICA"],
+  "SISTEMAS EN CHIP": ["ARQUITECTURA DE COMPUTADORAS"],
+  "PROCESAMIENTO DIGITAL DE SENALES": ["MATEMATICAS AVANZADAS PARA LA INGENIERIA"],
+  "INGENIERIA DE SOFTWARE": ["ANALISIS Y DISENO DE SISTEMAS"],
+  "APLICACIONES PARA COMUNICACIONES EN RED": ["REDES DE COMPUTADORAS"],
+  "ADMINISTRACION DE SERVICIOS EN RED": ["REDES DE COMPUTADORAS"],
+  "SISTEMAS DISTRIBUIDOS": ["SISTEMAS OPERATIVOS"],
+};
+const VENTANA_SEM = 3; // máximo de semestres que puede abarcar el horario auto
+
+function buscarMateriaPlan(normName) {
+  for (let s = 0; s < PLAN.length; s++) {
+    const arr = PLAN[s].materias;
+    for (let i = 0; i < arr.length; i++) {
+      if (norm(arr[i][0]) === normName) return { s, i, id: idOf(s, i), name: arr[i][0] };
+    }
+  }
+  return null;
+}
+
+// ¿Los prerequisitos de la materia están todos aprobados? (sin prereq = libre)
+function prereqsAprobados(name) {
+  const reqs = SERIACION[norm(name)];
+  if (!reqs || !reqs.length) return true;
+  return reqs.every((rn) => {
+    const mt = buscarMateriaPlan(rn);
+    if (!mt) return true; // prereq no hallado en el plan: no bloquear
+    return getSub(mt.id, mt.name).status === "aprobada";
+  });
+}
+
+// Nombre legible del/los prereq(s) que faltan por aprobar (para el mensaje)
+function prereqFaltante(name) {
+  const reqs = SERIACION[norm(name)];
+  if (!reqs) return null;
+  for (const rn of reqs) {
+    const mt = buscarMateriaPlan(rn);
+    if (mt && getSub(mt.id, mt.name).status !== "aprobada") return mt.name;
+  }
+  return null;
+}
+
 // Ajusta la ventana horaria sugerida según el turno elegido
 document.getElementById("autoTurno").addEventListener("change", (e) => {
   const v = e.target.value;
@@ -1299,24 +1439,47 @@ function generarHorarioAuto() {
   const credBase = base.reduce((a, h) => a + h.cred, 0);
   const credDisponibles = MAX_CRED - credBloq - credBase;
 
-  const faltantes = [];
+  // 1) Todas las pendientes inscribibles que no estén ya en el horario
+  const pendientes = [];
   for (let s = 0; s < PLAN.length; s++) {
     PLAN[s].materias.forEach(([name, cred], i) => {
       const id = idOf(s, i);
       if (OPT_SLOTS[id]) return;
       const rec = getSub(id, name);
       if (rec.status === "pendiente" && canInscribir(rec) && !base.some((h) => h.sid === id)) {
-        faltantes.push({ id, name, cred, i, s, recurse: rec.veces >= 2 });
+        pendientes.push({ id, name, cred, i, s, recurse: rec.veces >= 2 });
       }
     });
   }
 
-  if (faltantes.length === 0) {
+  if (pendientes.length === 0) {
     autoPool = []; autoLastKey = null; autoCtx = null;
     if (otraBtn) otraBtn.hidden = true;
     resultEl.innerHTML = `<div class="auto-warn">No faltan materias por inscribir (o ya las tienes en el horario).</div>`;
     return;
   }
+
+  // 2) Seriación: la dependiente solo entra si su prerequisito está aprobado
+  const bloqueadasSer = pendientes.filter((f) => !prereqsAprobados(f.name));
+  let faltantes = pendientes.filter((f) => prereqsAprobados(f.name));
+
+  if (faltantes.length === 0) {
+    autoPool = []; autoLastKey = null; autoCtx = null;
+    if (otraBtn) otraBtn.hidden = true;
+    const ejemplo = bloqueadasSer[0];
+    const req = ejemplo ? prereqFaltante(ejemplo.name) : null;
+    resultEl.innerHTML = `<div class="auto-warn">Todas las pendientes están bloqueadas por seriación` +
+      (req ? ` (ej.: <b>${esc(ejemplo.name)}</b> necesita aprobar <b>${esc(req)}</b>)` : "") +
+      `. Aprueba/captura los prerequisitos primero o agrégalas a mano.</div>`;
+    return;
+  }
+
+  // 3) Ventana de semestres: ancla en el semestre más bajo con pendientes
+  //    colocables y permite a lo más VENTANA_SEM semestres (ej. 1 → 1,2,3).
+  const minSem = Math.min(...faltantes.map((f) => f.s));
+  const maxSem = minSem + (VENTANA_SEM - 1);
+  const fueraVentana = faltantes.filter((f) => f.s > maxSem);
+  faltantes = faltantes.filter((f) => f.s <= maxSem);
 
   if (credDisponibles <= 0) {
     autoPool = []; if (otraBtn) otraBtn.hidden = true;
@@ -1383,7 +1546,12 @@ function generarHorarioAuto() {
   const minHuecos = soluciones.find((s) => s.placed === bestPlaced).huecos;
   autoPool = soluciones.filter((s) => s.placed === bestPlaced && s.huecos === minHuecos);
   autoLastKey = null;
-  autoCtx = { totalFaltantes: faltantes.length };
+  autoCtx = {
+    totalFaltantes: faltantes.length,
+    bloqueadasSer: bloqueadasSer.length,
+    fueraVentana: fueraVentana.length,
+    minSem, maxSem,
+  };
 
   aplicarSolucionAuto();
 }
@@ -1423,8 +1591,15 @@ function aplicarSolucionAuto() {
   let html = `<div class="auto-ok">✅ Agregué <b>${colocadas}</b> materia(s): ${resumenSems}. ` +
     `Horario: <b>${state.horario.length}</b> materias · ${fmt(totalCred)} créditos · ` +
     `<b>${sol.huecos === 0 ? "sin horas muertas" : sol.huecos + " hueco(s)"}</b>.</div>`;
+  html += `<div class="auto-hint">Ventana de inscripción: <b>${PLAN[autoCtx.minSem].sem} → ${PLAN[autoCtx.maxSem].sem}</b> (máx ${VENTANA_SEM} semestres).</div>`;
   if (sinFit > 0) {
-    html += `<div class="auto-warn">⚠️ ${sinFit} materia(s) no cupieron sin chocar en tu ventana. Amplía el horario o agrégalas a mano.</div>`;
+    html += `<div class="auto-warn">⚠️ ${sinFit} materia(s) no cupieron sin chocar en tu ventana de horas. Amplía el horario o agrégalas a mano.</div>`;
+  }
+  if (autoCtx.bloqueadasSer > 0) {
+    html += `<div class="auto-warn">🔒 ${autoCtx.bloqueadasSer} materia(s) bloqueada(s) por seriación (te falta aprobar su prerequisito).</div>`;
+  }
+  if (autoCtx.fueraVentana > 0) {
+    html += `<div class="auto-hint">↑ ${autoCtx.fueraVentana} materia(s) quedaron fuera de la ventana de ${VENTANA_SEM} semestres (de ${PLAN[Math.min(autoCtx.maxSem + 1, PLAN.length - 1)].sem} en adelante). Aparecerán cuando avances.</div>`;
   }
   if (autoPool.length > 1) {
     html += `<div class="auto-hint">¿No te convence? Pulsa <b>🎲 Otra opción</b> para barajar otra combinación igual de compacta.</div>`;
