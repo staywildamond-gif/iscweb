@@ -140,6 +140,15 @@ h1 {
   font-family: var(--display); font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em;
   padding: 2px 7px; border-radius: 999px; background: var(--accent); color: #fff;
 }
+.diftag {
+  font-family: var(--display); font-size: 10px; font-weight: 700;
+  padding: 2px 6px; border-radius: 999px; letter-spacing: 0.03em;
+}
+.diftag[data-dif="relajada"]  { background: #dcfce7; color: #14532d; }
+.diftag[data-dif="llevadera"] { background: #dbeafe; color: #1e3a8a; }
+.diftag[data-dif="moderada"]  { background: #fef3c7; color: #78350f; }
+.diftag[data-dif="pesada"]    { background: #fecaca; color: #991b1b; }
+.diftag[data-dif="brutal"]    { background: #7f1d1d; color: #fff; }
 .cred { font-family: var(--display); font-weight: 600; font-size: 13px; color: var(--ink-soft); white-space: nowrap; }
 .cred::after { content: " cr"; }
 
@@ -222,6 +231,7 @@ select.st[data-st="reprobada"] { background-color: var(--bg-repr); color: var(--
 .status-badge[data-st="reprobada"] { background: var(--bg-repr); color: var(--c-repr); }
 .status-badge[data-recurse="1"]    { background: #fdedcf; color: #b45309; }
 .status-badge[data-blocked="1"]    { background: #7f1d1d; color: #fff; }
+.status-badge[data-inscrita="1"]   { background: #dbeafe; color: #1e40af; }
 
 /* Chip de turno en las tarjetas de oferta (dropdown de inscripción) */
 .tchip {
