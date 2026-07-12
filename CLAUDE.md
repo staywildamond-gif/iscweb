@@ -16,8 +16,12 @@ app.js               ← lógica principal (estado, render, eventos)
 styles.css           ← visual
 schedule.js          ← generado desde horarios.csv + IMG/VESP/horario_completo1.csv (430 ofertas, M+V ISC)
 metrics.js           ← generado desde AESTR_CORREGIDO_3.csv + AESTR_VESPERTINO_plantilla.csv (202 profes M+V)
+maestros_manual.js   ← generado desde maestros_manual.csv (205 links de fuente; se carga con <script> para file://)
+cupos.js             ← generado desde cupos.csv (476 grupo+materia con cupo/inscritos/disponibles)
 roster.js            ← mapeo profes → materias (M + V); aún necesario para resolver OPTATIVA A1/B1
 optativas.js         ← 14 especializaciones (ramas) y sus materias por sem
+build.ps1            ← regenera schedule.js + metrics.js + maestros_manual.js desde los CSV (UTF-8)
+validate.ps1         ← audita choques, horas, profes sin métrica, links faltantes
 ```
 
 ### Fuentes canónicas (CSVs editables a mano)
@@ -27,9 +31,18 @@ horarios.csv                    ← Mat ISC, 240 filas, sin choques, IS LA VERDA
 AESTR_CORREGIDO_3.csv           ← Mat ISC, calificaciones por maestro, IS LA VERDAD para metrics.js (parte M)
 IMG/VESP/horario_completo1.csv  ← Vesp ISC, 190 filas, sin choques, YA en schedule.js (parte V)
 AESTR_VESPERTINO_plantilla.csv  ← Vesp ISC, calificaciones 105 maestros, YA en metrics.js (parte V)
+maestros_manual.csv             ← nombre,link_fuente (links de MisProfesores). IS LA VERDAD para maestros_manual.js
+cupos.csv                       ← grupo,codigo,materia,semestre,cupo,inscritos,disponibles. IS LA VERDAD para cupos.js
 ```
 
-**Regla:** si el usuario corrige un CSV, hay que **regenerar** el `.js` correspondiente con PowerShell. Los `.js` son artefactos derivados.
+**Cupos (ocupabilidad):** se cruzan con `schedule.js` por **grupo + norm(materia)** (`cupoDe()` en core.js). 429/430 ofertas cruzan (grupos `XCX` de Trabajo Terminal/optativas mixtas no tienen horario, no aplican). La etiqueta `cupoBadge()` muestra "N lugares" (verde >5 · amarillo ≤5) · "Lleno" (disp 0) · "Sobrecupo" (disp <0), en las tarjetas de oferta y en la rejilla del horario. Es una **foto** del momento: cuando el usuario mande datos nuevos, actualizar `cupos.csv` y correr `build.ps1`.
+
+**Regla:** si el usuario corrige un CSV, hay que **regenerar** el `.js` correspondiente. Los `.js` son artefactos derivados. Ya no es ad-hoc: corre **`build.ps1`** (regenera los 3 `.js` en UTF-8, aplica correcciones conocidas, respeta coma decimal española) y luego **`validate.ps1`** (0 choques, horas válidas, profes/links). Detalles no obvios que `build.ps1` maneja:
+- Los CSV de métricas usan **coma decimal** entrecomillada (`"5,9"`) → se normaliza a punto.
+- Merge M+V con **dedup por nombre, matutino gana** (por eso TELLEZ BARRERA sale correcto pese a tener columnas invertidas en el CSV vespertino).
+- Corrección explícita en `$METRIC_FIX`: BARRALES recomiendan `1.4→14`.
+- Maestros sin ningún dato (calidad/rec/dif vacíos) se omiten de `metrics.js`.
+- El vespertino (`horario_completo1.csv`) trae columna extra `Fuente`: se lee por nombre de header, no por posición.
 
 ### Convención de IDs
 

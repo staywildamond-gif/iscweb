@@ -156,6 +156,8 @@
       </div>
 
       <div class="horario-actions">
+        <button id="exportJpgBtn" class="btn">📷 Exportar JPG</button>
+        <button id="exportXlsxBtn" class="btn">📊 Exportar XLSX</button>
         <button id="clearHorarioBtn" class="btn-danger">🗑 Borrar todo el horario</button>
       </div>
 
@@ -173,11 +175,22 @@
 
   </div>
 
+  <!-- Datos (literales) -->
   <script src="roster.js"></script>
   <script src="metrics.js"></script>
   <script src="schedule.js"></script>
   <script src="optativas.js"></script>
   <script src="maestros_manual.js"></script>
-  <script src="app.js"></script>
+  <script src="cupos.js"></script>
+  <!-- App (antes app.js, ahora modularizado; el orden reproduce el archivo original) -->
+  <script src="data.js"></script>
+  <script src="core.js"></script>
+  <script src="avance.js"></script>
+  <script src="maestros.js"></script>
+  <script src="horario.js"></script>
+  <script src="optativas-ui.js"></script>
+  <script src="auto.js"></script>
+  <script src="export.js"></script>
+  <script src="init.js"></script>
 </body>
 </html>
