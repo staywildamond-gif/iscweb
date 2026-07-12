@@ -1,5 +1,5 @@
-// ========== FUENTES MANUALES POR MAESTRO (generado desde maestros_manual.csv) ==========
-// nombre -> { link } . Editable: corrige maestros_manual.csv y regenera este .js.
+﻿// ========== FUENTES MANUALES POR MAESTRO (generado desde maestros_manual.csv) ==========
+// nombre -> { link } . Editable: corrige maestros_manual.csv y corre build.ps1.
 // Se carga con <script> para que funcione tambien al abrir el HTML sin servidor (file://).
 const MANUAL_LINKS = {
   "AGUILAR GARCIA RAFAEL": { link: "https://www.misprofesores.com/profesores/Rafael-Aguilar-Garcia_32564" },
@@ -24,7 +24,7 @@ const MANUAL_LINKS = {
   "CAMACHO VAZQUEZ VANESSA ALEJANDRA": { link: "https://www.misprofesores.com/profesores/VANESSA-ALEJANDRA-CAMACHO-VAZQUEZ_172919" },
   "CAÑEDO SUAREZ LETICIA": { link: "https://www.misprofesores.com/profesores/Leticia-Canedo-Suarez_37380" },
   "CARBALLO JIMENEZ JUAN MANUEL": { link: "https://www.misprofesores.com/profesores/Juan-Manuel-Carballo-Jimenez_18610" },
-  "CARMONA GARCIA ENRIQUE ALFONSO": { link: "https://www.misprofesores.com/profesores/Enrique-Carmona_173014" },
+  "CARMONA GARCIA ENRIQUE ALFONSO": { link: "https://www.misprofesores.com/profesores/Enrique-Alfonso-Carmona-Garcia_182408" },
   "CARRANZA CASTILLO OSCAR": { link: "https://www.misprofesores.com/profesores/Oscar-Carranza_49780" },
   "CARRETO ARELLANO CHADWICK": { link: "https://www.misprofesores.com/profesores/Chadwick-Carreto-Arellano_27575" },
   "CASTILLO CABRERA GELACIO": { link: "https://www.misprofesores.com/profesores/GELACIO-CASTILLO-CABRERA_40736" },
