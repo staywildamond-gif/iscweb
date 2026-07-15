@@ -216,13 +216,13 @@ function Build-Manual {
 # ============================================================
 #  4) cupos.js
 # ============================================================
-function Build-Cupos {
-  $csv = Read-Csv (Join-Path $root 'cupos.csv')
+# Devuelve las lineas de objetos JS { g, m, cupo, ins, disp } de un CSV de cupos
+function CuposLines([string]$path) {
+  $csv = Read-Csv $path
   $h = $csv.header
   $iG = Col $h 'grupo'; $iM = Col $h 'materia'
   $iC = Col $h 'cupo'; $iI = Col $h 'inscritos'; $iD = Col $h 'disponibles'
   $lines = New-Object System.Collections.Generic.List[string]
-  $count = 0
   foreach ($r in $csv.rows) {
     if ($iG -ge $r.Count) { continue }
     $g = $r[$iG].Trim()
@@ -232,17 +232,28 @@ function Build-Cupos {
     if ($c -eq '') { $c = 0 }
     if ($ins -eq '') { $ins = 0 }
     if ($d -eq '') { $d = 0 }
-    $lines.Add(('  {{ g:"{0}", m:"{1}", cupo:{2}, ins:{3}, disp:{4} }},' -f (Js-Str $g), (Js-Str $m), $c, $ins, $d))
-    $count++
+    $lines.Add(('    {{ g:"{0}", m:"{1}", cupo:{2}, ins:{3}, disp:{4} }},' -f (Js-Str $g), (Js-Str $m), $c, $ins, $d))
   }
+  return $lines
+}
+
+function Build-Cupos {
+  # Vigente (cupos.csv) + historico por periodo (cupos_<periodo>.csv)
+  $vig = CuposLines (Join-Path $root 'cupos.csv')
+  $hist2026 = CuposLines (Join-Path $root 'cupos_2026_2.csv')
   $body = @()
-  $body += '// ========== CUPOS POR GRUPO+MATERIA (generado desde cupos.csv) =========='
-  $body += '// Foto de ocupabilidad al momento de la reinscripcion. Editable: corrige cupos.csv y corre build.ps1.'
+  $body += '// ========== CUPOS POR GRUPO+MATERIA (generado desde cupos.csv + cupos_<periodo>.csv) =========='
+  $body += '// CUPOS = periodo vigente. CUPOS_HIST = ocupabilidad de periodos pasados. Editable: corrige el CSV y corre build.ps1.'
   $body += 'const CUPOS = ['
-  $body += $lines
+  $body += ($vig | ForEach-Object { $_.Substring(2) })   # sin la indentacion extra
   $body += '];'
+  $body += 'const CUPOS_HIST = {'
+  $body += '  "2026/2": ['
+  $body += $hist2026
+  $body += '  ],'
+  $body += '};'
   Write-Utf8Bom (Join-Path $root 'cupos.js') (($body -join "`r`n") + "`r`n")
-  return $count
+  return $vig.Count
 }
 
 # ---------- run ----------

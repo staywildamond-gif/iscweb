@@ -882,14 +882,15 @@ footer { margin-top: 30px; font-size: 12px; color: var(--ink-soft); text-align: 
 .hist-meta { color: #64748b; font-size: 12px; }
 
 /* ===== Materias por periodo en la ficha del maestro (verde=27/1, rojo=dejó) ===== */
-.permat-legend { display: flex; gap: 10px; margin-bottom: 10px; }
-.permat-legend .permat { font-size: 10px; cursor: default; }
-.permats { display: flex; flex-wrap: wrap; gap: 8px; }
+.permat-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.permat-legend .permat { font-size: 10px; padding: 4px 10px; }
+.permats { display: flex; flex-wrap: wrap; gap: 10px; }
 .permat {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--display); font-size: 12px; font-weight: 600;
-  padding: 5px 10px; border-radius: 999px; border: 1px solid transparent;
+  display: flex; flex-direction: column; gap: 7px;
+  font-family: var(--display); font-size: 13px; font-weight: 600;
+  padding: 10px 12px; border-radius: 12px; border: 1px solid transparent;
 }
-.permat b { font-weight: 700; font-size: 11px; opacity: .85; }
-.permat.on  { background: #dcfce7; color: #166534; border-color: #86efac; }
-.permat.off { background: #fee2e2; color: #991b1b; border-color: #fca5a5; text-decoration: line-through; }
+.permat.on  { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+.permat.off { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+.permat-grupos { display: flex; flex-wrap: wrap; gap: 6px; }
+.permat-grupo { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; opacity: .95; }
