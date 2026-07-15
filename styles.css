@@ -860,3 +860,36 @@ footer { margin-top: 30px; font-size: 12px; color: var(--ink-soft); text-align: 
 }
 .sched-cell .cupo-tag[data-cupo="full"] { background: rgba(220,38,38,.92); color: #fff; }
 .sched-cell .cupo-tag[data-cupo="low"]  { background: rgba(245,158,11,.92); color: #fff; }
+
+/* ===== Pestaña Historial de horarios ===== */
+.hist-toolbar { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; }
+.hist-toolbar label {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--display); font-size: 12px; font-weight: 600; color: #475569;
+}
+.hist-toolbar select {
+  font: inherit; padding: 7px 10px; border-radius: 8px;
+  border: 1px solid #cbd5e1; background: #fff; min-width: 110px;
+}
+.hist-head-row { margin: 6px 0 10px; }
+.hist-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.hist-item {
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; font-size: 13px;
+}
+.hist-item b { font-family: var(--display); font-size: 12.5px; }
+.hist-prof { color: #334155; }
+.hist-meta { color: #64748b; font-size: 12px; }
+
+/* ===== Materias por periodo en la ficha del maestro (verde=27/1, rojo=dejó) ===== */
+.permat-legend { display: flex; gap: 10px; margin-bottom: 10px; }
+.permat-legend .permat { font-size: 10px; cursor: default; }
+.permats { display: flex; flex-wrap: wrap; gap: 8px; }
+.permat {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--display); font-size: 12px; font-weight: 600;
+  padding: 5px 10px; border-radius: 999px; border: 1px solid transparent;
+}
+.permat b { font-weight: 700; font-size: 11px; opacity: .85; }
+.permat.on  { background: #dcfce7; color: #166534; border-color: #86efac; }
+.permat.off { background: #fee2e2; color: #991b1b; border-color: #fca5a5; text-decoration: line-through; }

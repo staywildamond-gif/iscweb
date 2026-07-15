@@ -23,6 +23,7 @@
       <button class="tab" data-tab="maestros">Maestros</button>
       <button class="tab" data-tab="horario">Generar horario</button>
       <button class="tab" data-tab="optativas">Optativas</button>
+      <button class="tab" data-tab="historial">Historial</button>
     </nav>
 
     <!-- ===== PESTAÑA: AVANCE ===== -->
@@ -173,6 +174,23 @@
       <div id="rutasOpt"></div>
     </section>
 
+    <!-- ========== PESTAÑA 5 · HISTORIAL DE HORARIOS ========== -->
+    <section class="tabpane" id="pane-historial">
+      <div class="pane-head">
+        <h2 class="pane-title">Historial de horarios</h2>
+        <p class="pane-sub">Horarios oficiales de periodos pasados, por grupo. Solo lectura.</p>
+        <div class="hist-toolbar">
+          <label>Periodo
+            <select id="histPeriodo"></select>
+          </label>
+          <label>Grupo
+            <select id="histGrupo"></select>
+          </label>
+        </div>
+      </div>
+      <div id="histGrid"></div>
+    </section>
+
   </div>
 
   <!-- Datos (literales) -->
@@ -182,6 +200,7 @@
   <script src="optativas.js"></script>
   <script src="maestros_manual.js"></script>
   <script src="cupos.js"></script>
+  <script src="historial.js"></script>
   <!-- App (antes app.js, ahora modularizado; el orden reproduce el archivo original) -->
   <script src="data.js"></script>
   <script src="core.js"></script>
@@ -191,6 +210,7 @@
   <script src="optativas-ui.js"></script>
   <script src="auto.js"></script>
   <script src="export.js"></script>
+  <script src="historial-ui.js"></script>
   <script src="init.js"></script>
 </body>
 </html>
