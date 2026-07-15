@@ -57,6 +57,25 @@ function cupoDe(grupo, materia) {
   if (!grupo || !materia) return null;
   return cuposIndex[grupo + "|" + norm(materia)] || null;
 }
+// Índice histórico de cupos por periodo (CUPOS_HIST del cupos.js)
+const cuposHistIndex = {};
+if (typeof CUPOS_HIST !== "undefined" && CUPOS_HIST) {
+  Object.keys(CUPOS_HIST).forEach((p) => {
+    cuposHistIndex[p] = {};
+    (CUPOS_HIST[p] || []).forEach((c) => { cuposHistIndex[p][c.g + "|" + norm(c.m)] = c; });
+  });
+}
+function cupoHistDe(grupo, materia, periodo) {
+  const idx = cuposHistIndex[periodo];
+  if (!idx || !grupo || !materia) return null;
+  return idx[grupo + "|" + norm(materia)] || null;
+}
+// Etiqueta compacta "N/M" (inscritos/cupo) para un cupo histórico
+function cupoHistTag(c) {
+  if (!c) return "";
+  const level = c.disp < 0 ? "full" : c.disp === 0 ? "full" : c.disp <= 5 ? "low" : "ok";
+  return `<span class="cupo-tag" data-cupo="${level}" title="${c.ins} inscritos de ${c.cupo} · ${c.disp} disponibles">${c.ins}/${c.cupo}</span>`;
+}
 // Etiqueta "X lugares" / "Lleno" / "Sobrecupo" con color por disponibilidad.
 function cupoBadge(grupo, materia) {
   const c = cupoDe(grupo, materia);

@@ -312,15 +312,23 @@ function periodoMatsHTML(name) {
   if (ant.size === 0 && act.size === 0) {
     return `<div class="drop-empty">Sin registro en 2026/2 ni 2027/1.</div>`;
   }
+  // grupos con su etiqueta de cupo (vigente para 27/1, histórico para 26/2)
+  const gruposConCupo = (v, historico) =>
+    [...v.grupos].sort().map((g) => {
+      const c = historico ? cupoHistDe(g, v.materia, "2026/2") : cupoDe(g, v.materia);
+      const tag = historico ? cupoHistTag(c) : cupoBadge(g, v.materia);
+      return `<span class="permat-grupo">${esc(g)}${tag ? " " + tag : ""}</span>`;
+    }).join("");
+
   const chips = [];
   [...act.values()].forEach((v) => {
-    const g = [...v.grupos].sort().join(", ");
-    chips.push(`<span class="permat on" title="Imparte en 2027/1 · ${esc(g)}">${esc(titleCase(v.materia))}<b>${esc(g)}</b></span>`);
+    chips.push(`<span class="permat on">${esc(titleCase(v.materia))}<span class="permat-grupos">${gruposConCupo(v, false)}</span></span>`);
   });
   [...ant.keys()].filter((k) => !act.has(k)).forEach((k) => {
-    chips.push(`<span class="permat off" title="Impartía en 2026/2, ya no en 2027/1">${esc(titleCase(ant.get(k).materia))}</span>`);
+    const v = ant.get(k);
+    chips.push(`<span class="permat off">${esc(titleCase(v.materia))}<span class="permat-grupos">${gruposConCupo(v, true)}</span></span>`);
   });
-  return `<div class="permat-legend"><span class="permat on">Imparte en 27/1</span><span class="permat off">Ya no (era 26/2)</span></div>
+  return `<div class="permat-legend"><span class="permat on">Imparte en 27/1 · cupo libre</span><span class="permat off">Ya no (26/2) · inscritos/cupo</span></div>
     <div class="permats">${chips.join("")}</div>`;
 }
 

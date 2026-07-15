@@ -48,13 +48,21 @@ function renderHistorial() {
     return;
   }
 
+  // cupo del periodo: histórico si está en CUPOS_HIST, si no el vigente
+  const cupoPeriodo = (o) => cuposHistIndex[periodo]
+    ? cupoHistDe(o.grupo, o.materia, periodo)
+    : cupoDe(o.grupo, o.materia);
+
   // lista de materias + rejilla (reutiliza la rejilla de la ficha del maestro)
-  const lista = ofertas.map((o) => `
+  const lista = ofertas.map((o) => {
+    const c = cupoPeriodo(o);
+    return `
     <div class="hist-item">
       <b>${esc(titleCase(o.materia))}</b>
       <span class="hist-prof">${esc(o.profesor || "")}</span>
-      <span class="hist-meta">Ed. ${esc(String(o.edificio || "—"))} · Salón ${esc(String(o.salon || "—"))}</span>
-    </div>`).join("");
+      <span class="hist-meta">Ed. ${esc(String(o.edificio || "—"))} · Salón ${esc(String(o.salon || "—"))}${c ? " · " + cupoHistTag(c) : ""}</span>
+    </div>`;
+  }).join("");
 
   histGridEl.innerHTML = `
     <div class="hist-head-row">
