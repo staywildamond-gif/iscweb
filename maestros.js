@@ -277,6 +277,9 @@ function showProfDetail(name) {
       <div class="pd-m"><div class="pd-m-label">Dificultad</div>${metricCell(m.dificultad, "dif")}</div>
     </div>
 
+    <h3 class="pd-section">Materias por periodo (26/2 → 27/1)</h3>
+    ${periodoMatsHTML(name)}
+
     <h3 class="pd-section">Horario semanal</h3>
     ${tablaHTML}
 
@@ -286,6 +289,39 @@ function showProfDetail(name) {
 
   document.getElementById("profBack").onclick = hideProfDetail;
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// Materias que imparte un profesor en un periodo del HISTORIAL (por nombre normalizado)
+function materiasDeProfPeriodo(name, periodo) {
+  const map = new Map(); // materiaNorm -> { materia, grupos:Set }
+  if (typeof HISTORIAL === "undefined" || !HISTORIAL[periodo]) return map;
+  const nn = norm(name);
+  HISTORIAL[periodo].forEach((o) => {
+    if (norm(o.profesor) !== nn) return;
+    const k = norm(o.materia);
+    if (!map.has(k)) map.set(k, { materia: o.materia, grupos: new Set() });
+    map.get(k).grupos.add(o.grupo);
+  });
+  return map;
+}
+
+// Etiquetas verde (imparte en 27/1) / rojo (impartía en 26/2, ya no) para un maestro
+function periodoMatsHTML(name) {
+  const ant = materiasDeProfPeriodo(name, "2026/2");
+  const act = materiasDeProfPeriodo(name, "2027/1");
+  if (ant.size === 0 && act.size === 0) {
+    return `<div class="drop-empty">Sin registro en 2026/2 ni 2027/1.</div>`;
+  }
+  const chips = [];
+  [...act.values()].forEach((v) => {
+    const g = [...v.grupos].sort().join(", ");
+    chips.push(`<span class="permat on" title="Imparte en 2027/1 · ${esc(g)}">${esc(titleCase(v.materia))}<b>${esc(g)}</b></span>`);
+  });
+  [...ant.keys()].filter((k) => !act.has(k)).forEach((k) => {
+    chips.push(`<span class="permat off" title="Impartía en 2026/2, ya no en 2027/1">${esc(titleCase(ant.get(k).materia))}</span>`);
+  });
+  return `<div class="permat-legend"><span class="permat on">Imparte en 27/1</span><span class="permat off">Ya no (era 26/2)</span></div>
+    <div class="permats">${chips.join("")}</div>`;
 }
 
 // Nombre legible del sitio a partir del dominio del link

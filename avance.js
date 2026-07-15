@@ -13,6 +13,7 @@ tabsEl.querySelectorAll(".tab").forEach((btn) => {
     if (tab === "maestros") renderProfs();
     if (tab === "horario") renderHorario();
     if (tab === "optativas") renderOptativas();
+    if (tab === "historial") renderHistorial();
   };
 });
 
