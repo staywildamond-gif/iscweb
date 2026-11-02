@@ -894,3 +894,35 @@ footer { margin-top: 30px; font-size: 12px; color: var(--ink-soft); text-align: 
 .permat.off { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
 .permat-grupos { display: flex; flex-wrap: wrap; gap: 6px; }
 .permat-grupo { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; opacity: .95; }
+
+/* ===== Selector de carrera (header) ===== */
+.herotop {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+.carrerapick {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--display); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft);
+}
+.carrerapick select {
+  font-family: var(--body); font-size: 13px; font-weight: 500;
+  letter-spacing: 0; text-transform: none; color: var(--ink);
+  padding: 7px 10px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--card); cursor: pointer;
+}
+.carrerapick select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.opt-nota {
+  background: #f8fafc; border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  border-radius: 0 10px 10px 0; padding: 10px 14px; margin-bottom: 14px;
+  font-size: 13px; color: var(--ink-soft); line-height: 1.5;
+}
+
+/* Badge de carrera junto al nombre del maestro (filtro "Todas") */
+.cbadge {
+  display: inline-block; margin-left: 5px; vertical-align: middle;
+  font-family: var(--display); font-weight: 700; font-size: 9.5px; line-height: 1;
+  letter-spacing: .04em; padding: 3px 5px; border-radius: 5px;
+  background: #eef1f6; color: #5b6486; border: 1px solid transparent;
+}
+.cbadge.propia { background: #e8e8fb; color: var(--accent); border-color: #c9c9f5; }

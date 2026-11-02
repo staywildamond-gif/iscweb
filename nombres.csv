@@ -1,0 +1,212 @@
+# nombre = como se ve en la app. nombre_saes = como lo escribe el gestor (llave para cruzar).
+# Editable a mano: corrige la columna nombre y corre build-data.ps1.
+carrera,clave,nombre,nombre_saes
+ISC,C103,Cálculo,CALCULO
+ISC,C104,Análisis vectorial,ANALISIS VECTORIAL
+ISC,C102,Matemáticas discretas,MATEMATICAS DISCRETAS
+ISC,C105,Comunicación oral y escrita,COMUNICACION ORAL Y ESCRITA
+ISC,C101,Fundamentos de programación,FUNDAMENTOS DE PROGRAMACION
+ISC,C201,Algoritmos y estructura de datos,ALGORITMOS Y ESTRUCTURA DE DATOS
+ISC,C202,Álgebra lineal,ALGEBRA LINEAL
+ISC,C203,Cálculo aplicado,CALCULO APLICADO
+ISC,C204,Mecánica y electromagnetismo,MECANICA Y ELECTROMAGNETISMO
+ISC,C205,"Ingeniería, ética y sociedad",INGENIERIA ETICA Y SOCIEDAD
+ISC,C206,Fundamentos económicos,FUNDAMENTOS ECONOMICOS
+ISC,C301,Análisis y diseño de algoritmos,ANALISIS Y DISEÑO DE ALGORITMOS
+ISC,C302,Paradigmas de programación,PARADIGMAS DE PROGRAMACION
+ISC,C303,Ecuaciones diferenciales,ECUACIONES DIFERENCIALES
+ISC,C304,Fundamentos de diseño digital,FUNDAMENTOS DE DISEÑO DIGITAL
+ISC,C305,Circuitos eléctricos,CIRCUITOS ELECTRICOS
+ISC,C306,Bases de datos,BASES DE DATOS
+ISC,C307,Finanzas empresariales,FINANZAS EMPRESARIALES
+ISC,C401,Teoría de la computación,TEORIA DE LA COMPUTACION
+ISC,C402,Probabilidad y estadística,PROBABILIDAD Y ESTADISTICA
+ISC,C403,Matemáticas avanzadas para la ingeniería,MATEMATICAS AVANZADAS PARA LA INGENIERIA
+ISC,C404,Diseño de sistemas digitales,DISEÑO DE SISTEMAS DIGITALES
+ISC,C405,Electrónica analógica,ELECTRONICA ANALOGICA
+ISC,C406,Tecnologías para desarrollo de aplicaciones web,TECNOLOGIAS PARA DESARROLLO DE APLICACIONES WEB
+ISC,C407,Sistemas operativos,SISTEMAS OPERATIVOS
+ISC,C501,Compiladores,COMPILADORES
+ISC,C502,Procesamiento digital de señales,PROCESAMIENTO DIGITAL DE SEÑALES
+ISC,C503,Arquitectura de computadoras,ARQUITECTURA DE COMPUTADORAS
+ISC,C504,Instrumentación y control,INSTRUMENTACION Y CONTROL
+ISC,C505,Análisis y diseño de sistemas,ANALISIS Y DISEÑO DE SISTEMAS
+ISC,C506,Formulación y evaluación de proyectos informáticos,FORMULACION Y EVALUACION DE PROYECTOS INFORMATICOS
+ISC,C507,Redes de computadoras,REDES DE COMPUTADORAS
+ISC,C601,Inteligencia artificial,INTELIGENCIA ARTIFICIAL
+ISC,C602,Sistemas en chip,SISTEMAS EN CHIP
+ISC,C603,Métodos cuantitativos para la toma de decisiones,METODOS CUANTITATIVOS PARA LA TOMA DE DECISIONES
+ISC,C618,Ingeniería de software,INGENIERIA DE SOFTWARE
+ISC,C619,Aplicaciones para comunicaciones en red,APLICACIONES PARA COMUNICACIONES EN RED
+ISC,C604,Bases de datos no relacionales,BIG DATA|NON-RELATIONAL DATABASES
+ISC,C605,Aseguramiento de la calidad del software y patrones de diseño,DES. DE APLIC|SOFTWARE QUALLITY ASSURANCE AND DESING PATTERNS
+ISC,C606,Herramientas estadísticas para analítica de datos,MINERIA DE DATOS|STATISTICAL TOOLS FOR DATA ANALYTICS
+ISC,C607,Instrumentación virtual,INSTRUMENTAL VIRTUAL|VIRTUAL INSTRUMENTATION
+ISC,C608,Sistemas embebidos,INTERNET DE LAS COSAS|EMBEDDED SYSTEMS
+ISC,C609,Seguridad informática,GOBIERNO DE TI|COMPUTER SECURITY
+ISC,C610,Introducción a la criptografía,CRIPTOGRAFIA|INTRODUCTION TO CRYPTOGRAPHY
+ISC,C611,Aprendizaje automático,PROC. DE LENG. NAT|MACHINE LEARNING
+ISC,C612,Algoritmos genéticos,ALGORITMOS BIOINSPIRADOS|GENETIC ALGORITHMS
+ISC,C613,Computación gráfica,COMPUTACION GRAFICA|COMPUTER GRAPHICS
+ISC,C614,Aprendizaje automático aplicado a visión,VISION POR COMPUTADORA|MACHINE LEARNING
+ISC,C615,Autómatas celulares,SISTEMAS COMPLEJOS|CELLULAR AUTOMATA
+ISC,C616,Gestión de empresas de alta tecnología,GES. DE EMP. DE ALTA TEC|HIGH TECHNOLOGY ENTERPRISE MANAGEMENT
+ISC,C617,Tópicos selectos de computación I,TOPICOS SEL. DE COM|COMPUTIG SELECTED TOPICS I
+ISC,C701,Trabajo terminal I,TRABAJO TERMINAL I
+ISC,C702,Sistemas distribuidos,SISTEMAS DISTRIBUIDOS
+ISC,C717,Desarrollo de aplicaciones móviles nativas,DESARROLLO DE APLICACIONES MOVILES NATIVAS
+ISC,C718,Administración de servicios en red,ADMINISTRACION DE SERVICIOS EN RED
+ISC,C703,Big Data,BIG DATA|BIG DATA
+ISC,C704,Frameworks de cliente web y backend,DES. DE APLIC|WEB CLIENT AND BACKEND DEVELOPMEN FRAMEWORKS
+ISC,C705,Minería de datos,MINERIA DE DATOS|DATA MINING
+ISC,C706,Aplicaciones de instrumentación virtual,INSTRUMENTAL VIRTUAL|VIRTUAL INSTRUMENTIATION APPLICATIONS
+ISC,C707,Internet de las cosas,INTERNET DE LAS COSAS|INTERNET OF THINGS
+ISC,C708,Gobierno de TI,GOBIERNO DE TI|IT GOVERNANCE
+ISC,C709,Tópicos selectos en criptografía,CRIPTOGRAFIA|SELECTED TOPICS IN CRYPTOGRAPHY
+ISC,C710,Procesamiento de lenguaje natural,PROC. DE LENG|NATURAL LANGUAGE PROCESSING
+ISC,C711,Bioinformática,ALGORITMOS BIOINSPIRADOS|BIOINFORMATICS
+ISC,C712,Realidad virtual y aumentada,COMPUTACION GRAFICA|VIRTUAL AND AUGMENTED REALITY
+ISC,C713,Análisis de imágenes,VISION POR COMPUTADORA|IMAGE ANALYSIS
+ISC,C714,Sistemas complejos,SISTEMAS COMPLEJOS|COMPLEX SYSTEMS
+ISC,C715,Ingeniería económica,GES. DE EMP. DE ALTA TEC|ECONOMIC ENGINEERING
+ISC,C716,Tópicos selectos de computación II,TOPICOS SEL. DE COM|COMPUTTING SELECTED TOPICS II
+ISC,C801,Trabajo terminal II,TRABAJO TERMINAL II
+ISC,C802,Liderazgo personal,LIDERAZGO PERSONAL
+ISC,C803,Gestión empresarial,GESTION EMPRESARIAL
+ISC,C804,Estancia profesional,ESTANCIA PROFESIONAL
+ISC,C805,Desarrollo de habilidades sociales para la alta dirección,DESARROLLO DE HABILIDADES SOCIALES PARA LA ALTA DIRECCION
+IA,B101,Fundamentos de programación,FUNDAMENTOS DE PROGRAMACIÓN
+IA,B102,Matemáticas discretas,MATEMATICAS DISCRETAS
+IA,B103,Comunicación oral y escrita,COMUNICACIÓN ORAL Y ESCRITA
+IA,B104,Cálculo,CALCULO
+IA,B105,Mecánica y electromagnetismo,MECANICA Y ELECTROMAGNETISMO
+IA,B106,Fundamentos económicos,FUNDAMENTOS ECONOMICOS
+IA,B201,Algoritmos y estructuras de datos,ALGORITMOS Y ESTRUCTURAS DE DATOS
+IA,B202,Álgebra lineal,ALGEBRA LINEAL
+IA,B203,Fundamentos de diseño digital,FUNDAMENTOS DE DISEÑO DIGITAL
+IA,B204,Cálculo multivariable,CALCULO MULTIVARIABLE
+IA,B205,"Ingeniería, ética y sociedad","INGENIERIA, ETICA Y SOCIEDAD"
+IA,B206,Finanzas empresariales,FINANZAS EMPRESARIALES
+IA,B301,Análisis y diseño de algoritmos,ANÁLISIS Y DISEÑO DE ALGORITMOS
+IA,B302,Paradigmas de programación,PARADIGMAS DE PROGRAMACIÓN
+IA,B303,Ecuaciones diferenciales,ECUACIONES DIFERENCIALES
+IA,B304,Bases de datos,BASES DE DATOS
+IA,B305,Diseño de sistemas digitales,DISEÑO DE SISTEMAS DIGITALES
+IA,B306,Liderazgo personal,LIDERAZGO PERSONAL
+IA,B401,Fundamentos de inteligencia artificial,FUNDAMENTOS DE INTELIGENCIA ARTIFICIAL
+IA,B402,Probabilidad y estadística,PROBABILIDAD Y ESTADÍSTICA
+IA,B403,Matemáticas avanzadas para la ingeniería,MATEMÁTICAS AVANZADAS PARA LA INGENIERÍA
+IA,B404,Tecnologías para el desarrollo de aplicaciones web,TECNOLOGÍAS PARA EL DESARROLLO DE APLICACIONES WEB
+IA,B405,Análisis y diseño de sistemas,ANÁLISIS Y DISEÑO DE SISTEMAS
+IA,B406,Procesamiento digital de imágenes,PROCESAMIENTO DIGITAL DE IMÁGENES
+IA,B501,Aprendizaje de máquina,APRENDIZAJE DE MÁQUINA
+IA,B502,Visión artificial,VISIÓN ARTIFICIAL
+IA,B503,Teoría de la computación,TEORÍA DE LA COMPUTACIÓN
+IA,B504,Procesamiento de señales,PROCESAMIENTO DE SEÑALES
+IA,B505,Algoritmos bioinspirados,ALGORITMOS BIOINSPIRADOS
+IA,B506,Tecnologías de lenguaje natural,TECNOLOGÍAS DE LENGUAJE NATURAL
+IA,B601,Cómputo paralelo,CÓMPUTO PARALELO
+IA,B602,Redes neuronales y aprendizaje profundo,REDES NEURONALES Y APRENDIZAJE PROFUNDO
+IA,B603,Ingeniería de software para sistemas inteligentes,INGENIERÍA DE SOFTWARE PARA SISTEMAS INTELIGENTES
+IA,B604,Metodología de la investigación y divulgación científica,METODOLOGÍA DE LA INVESTIGACIÓN Y DIVULGACIÓN CIENTÍFICA
+IA,B640,Innovación y emprendimiento tecnológico,INNOVACIÓN Y EMPRENDIMIENTO TECNOLÓGICO
+IA,B641,Propiedad intelectual,PROPIEDAD INTELECTUAL
+IA,B642,Aplicaciones de lenguaje natural,APLICACIONES DE LENGUAJE NATURAL
+IA,B643,Sistemas multiagentes,SISTEMAS MULTIAGENTES
+IA,B644,Aplicaciones de sistemas multiagentes,APLICACIONES DE SISTEMAS MULTIAGENTES
+IA,B645,Minería de datos,MINERÍA DE DATOS
+IA,B646,Big data,BIG DATA
+IA,B647,Temas selectos de inteligencia artificial,TEMAS SELECTOS DE INTELIGENCIA ARTIFICIAL
+IA,B648,Cómputo en la nube,CÓMPUTO EN LA NUBE
+IA,B649,Técnicas de programación para robots móviles,TÉCNICAS DE PROGRAMACIÓN PARA ROBOTS MÓVILES
+IA,B650,Interacción humano-máquina,INTERACCIÓN HUMANO - MÁQUINA
+IA,B651,Programación de dispositivos móviles,PROGRAMACIÓN DE DISPOSITIVOS MÓVILES
+IA,B652,Aplicaciones de inteligencia artificial en sistemas embebidos,APLICACIONES DE INTELIGENCIA ARTIFICIAL EN SISTEMAS EMBEBIDOS
+IA,B653,Tópicos selectos de algoritmos bioinspirados,TÓPICOS SELECTOS DE ALGORITMOS BIOINSPIRADOS
+IA,B701,Trabajo terminal I,TRABAJO TERMINAL I
+IA,B702,Reconocimiento de voz,RECONOCIMIENTO DE VOZ
+IA,B703,Formulación y evaluación de proyectos informáticos,FORMULACIÓN Y EVALUACIÓN DE PROYECTOS INFORMÁTICOS
+IA,B740,Innovación y emprendimiento tecnológico,INNOVACIÓN Y EMPRENDIMIENTO TECNOLÓGICO
+IA,B741,Propiedad intelectual,PROPIEDAD INTELECTUAL
+IA,B742,Aplicaciones de lenguaje natural,APLICACIONES DE LENGUAJE NATURAL
+IA,B743,Sistemas multiagentes,SISTEMAS MULTIAGENTES
+IA,B744,Aplicaciones de sistemas multiagentes,APLICACIONES DE SISTEMAS MULTIAGENTES
+IA,B745,Minería de datos,MINERÍA DE DATOS
+IA,B746,Big data,BIG DATA
+IA,B747,Temas selectos de inteligencia artificial,TEMAS SELECTOS DE INTELIGENCIA ARTIFICIAL
+IA,B748,Cómputo en la nube,CÓMPUTO EN LA NUBE
+IA,B749,Técnicas de programación para robots móviles,TÉCNICAS DE PROGRAMACIÓN PARA ROBOTS MÓVILES
+IA,B750,Interacción humano-máquina,INTERACCIÓN HUMANO - MÁQUINA
+IA,B751,Programación de dispositivos móviles,PROGRAMACIÓN DE DISPOSITIVOS MÓVILES
+IA,B752,Aplicaciones de inteligencia artificial en sistemas embebidos,APLICACIONES DE INTELIGENCIA ARTIFICIAL EN SISTEMAS EMBEBIDOS
+IA,B753,Tópicos selectos de algoritmos bioinspirados,TÓPICOS SELECTOS DE ALGORITMOS BIOINSPIRADOS
+IA,B801,Trabajo terminal II,TRABAJO TERMINAL II
+IA,B802,Gestión empresarial,GESTIÓN EMPRESARIAL
+IA,B803,Estancia profesional,ESTANCIA PROFESIONAL
+IA,B804,Desarrollo de habilidades sociales para la alta dirección,DESARROLLO DE HABILIDADES SOCIALES PARA LA ALTA DIRECCIÓN
+LCD,A101,Fundamentos de programación,FUNDAMENTOS DE PROGRAMACIÓN
+LCD,A102,Matemáticas discretas,MATEMATICAS DISCRETAS
+LCD,A103,Comunicación oral y escrita,COMUNICACIÓN ORAL Y ESCRITA
+LCD,A104,Cálculo,CALCULO
+LCD,A105,Introducción a la ciencia de datos,INTRODUCCION A LA CIENCIA DE DATOS
+LCD,A201,Algoritmos y estructuras de datos,ALGORITMOS Y ESTRUCTURAS DE DATOS
+LCD,A202,Álgebra lineal,ALGEBRA LINEAL
+LCD,A203,Ética y legalidad,ETICA Y LEGALIDAD
+LCD,A204,Cálculo multivariable,CALCULO MULTIVARIABLE
+LCD,A205,Fundamentos económicos,FUNDAMENTOS ECONOMICOS
+LCD,A301,Análisis y diseño de algoritmos,ANALISIS Y DISEÑO DE ALGORITMOS
+LCD,A302,Programación para ciencia de datos,PROGRAMACION PARA CIENCIA DE DATOS
+LCD,A303,Bases de datos,BASES DE DATOS
+LCD,A304,Probabilidad,PROBABILIDAD
+LCD,A305,Métodos numéricos,METODOS NUMERICOS
+LCD,A306,Finanzas empresariales,FINANZAS EMPRESARIALES
+LCD,A401,Desarrollo de aplicaciones web,DESARROLLO DE APLICACIONES WEB
+LCD,A402,Cómputo de alto desempeño,COMPUTO DE ALTO DESEMPEÑO
+LCD,A403,Desarrollo de aplicaciones para análisis de datos,DESARROLLO DE APLICACIONES PARA ANALISIS DE DATOS
+LCD,A404,Bases de datos avanzadas,BASES DE DATOS AVANZADAS
+LCD,A405,Estadística,ESTADISTICA
+LCD,A406,Liderazgo personal,LIDERAZGO PERSONAL
+LCD,A501,Aprendizaje de máquina e inteligencia artificial,APRENDIZAJE DE MAQUINA E INTELIGENCIA ARTIFICIAL
+LCD,A502,Analítica y visualización de datos,ANALITICA Y VISUALIZACION DE DATOS
+LCD,A503,Minería de datos,MINERIA DE DATOS
+LCD,A504,Procesos estocásticos,PROCESOS ESTOCASTICOS
+LCD,A505,Matemáticas avanzadas para ciencia de datos,MATEMATICAS AVANZADAS PARA CIENCIA DE DATOS
+LCD,A506,Metodología de la investigación y divulgación científica,METODOLOGIA DE LA INVESTIGACION Y DIVULGACION CIENTIFICA
+LCD,A601,Procesamiento de lenguaje natural,PROCESAMIENTO DE LENGUAJE NATURAL
+LCD,A602,Analítica avanzada de datos,ANALITICA AVANZADA DE DATOS
+LCD,A603,Modelado predictivo,MODELADO PREDICTIVO
+LCD,A604,Análisis de series de tiempo,ANALISIS DE SERIES DE TIEMPO
+LCD,A620,Estadística avanzada,ESTADISTICA AVANZADA
+LCD,A621,Temas selectos de inteligencia artificial,TEMAS SELECTOS DE INTELIGENCIA ARTIFICIAL
+LCD,A622,Temas selectos de aprendizaje profundo,TEMAS SELECTOS DE APRENDIZAJE PROFUNDO
+LCD,A623,Temas selectos de procesamiento de lenguaje natural,TEMAS SELECTOS DE PROCESAMIENTO DE LENGUAJE NATURAL
+LCD,A624,Bioinformática básica,BIOINFORMATICA BASICA
+LCD,A625,Bioinformática avanzada,BIOINFORMATICA AVANZADA
+LCD,A626,Sistemas de información geográfica,SISTEMAS DE INFORMACION GEOGRAFICA
+LCD,A627,Ciberseguridad,CIBERSEGURIDAD
+LCD,A628,Protección de datos,PROTECCION DE DATOS
+LCD,A629,Innovación y emprendimiento tecnológico,INNOVACION Y EMPRENDIMIENTO TECNOLOGICO
+LCD,A630,Propiedad intelectual,PROPIEDAD INTELECTUAL
+LCD,A631,Simulación básica,SIMULACION BASICA
+LCD,A632,Simulación avanzada,SIMULACION AVANZADA
+LCD,A701,Big data,BIG DATA
+LCD,A702,Modelos econométricos,MODELOS ECONOMETRICOS
+LCD,A703,Trabajo terminal I,TRABAJO TERMINAL I
+LCD,A704,Administración de proyectos de TI,ADMINISTRACION DE PROYECTOS DE TI
+LCD,A720,Estadística avanzada,ESTADISTICA AVANZADA
+LCD,A721,Temas selectos de inteligencia artificial,TEMAS SELECTOS DE INTELIGENCIA ARTIFICIAL
+LCD,A722,Temas selectos de aprendizaje profundo,TEMAS SELECTOS DE APRENDIZAJE PROFUNDO
+LCD,A723,Temas selectos de procesamiento de lenguaje natural,TEMAS SELECTOS DE PROCESAMIENTO DE LENGUAJE NATURAL
+LCD,A724,Bioinformática básica,BIOINFORMATICA BASICA
+LCD,A725,Bioinformática avanzada,BIOINFORMATICA AVANZADA
+LCD,A726,Sistemas de información geográfica,SISTEMAS DE INFORMACION GEOGRAFICA
+LCD,A727,Ciberseguridad,CIBERSEGURIDAD
+LCD,A728,Protección de datos,PROTECCION DE DATOS
+LCD,A729,Innovación y emprendimiento tecnológico,INNOVACION Y EMPRENDIMIENTO TECNOLOGICO
+LCD,A730,Propiedad intelectual,PROPIEDAD INTELECTUAL
+LCD,A731,Simulación básica,SIMULACION BASICA
+LCD,A732,Simulación avanzada,SIMULACION AVANZADA
+LCD,A801,Desarrollo de habilidades sociales para la alta dirección,DESARROLLO DE HABILIDADES SOCIALES PARA LA ALTA DIRECCION
+LCD,A802,Gestión empresarial,GESTION EMPRESARIAL
+LCD,A803,Trabajo terminal II,TRABAJO TERMINAL II
+LCD,A804,Estancia profesional,ESTANCIA PROFESIONAL
