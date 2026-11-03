@@ -94,6 +94,9 @@ $DIAS = @('Lun', 'Mar', 'Mie', 'Jue', 'Vie')
 $METRIC_FIX = @{
   # BARRALES: recomiendan capturado como 1.4, debe ser 14.
   'BARRALES LOPEZ ANA LUZ' = @{ recomiendan = '14' }
+  # Dificultad es escala 0-6; estos dos venian sin el separador decimal.
+  'LUNA BENOSO BENJAMIN'       = @{ dificultad = '4.4' }
+  'MARQUEZ ARREGUIN GUILLERMO' = @{ dificultad = '3.3' }
 }
 
 function Build-Metrics {

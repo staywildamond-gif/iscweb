@@ -61,8 +61,13 @@ PLAN.forEach((blk, s) => {
 });
 
 // ============================================================
-//  DIFICULTAD POR MATERIA (promedio real de profes M+V, escala 0–6 → 1–10)
+//  DIFICULTAD POR MATERIA — SOLO ISC
 // ============================================================
+// Promedio de profes M+V de ISC, escala 0–6 → 1–10. Es un artefacto heredado:
+// no se puede regenerar desde metrics.js (el ratio contra la dificultad cruda
+// varía de 1.5 a 8.7, no hay fórmula). Por eso difBadge() no lo presta a las
+// otras carreras: en IA y LCD las materias que comparten nombre mostraban una
+// dificultad calculada con profes que no son los suyos.
 const SUBJECT_DIFFICULTY = {
   "CALCULO": 6.5, "ANALISIS VECTORIAL": 6.6, "MATEMATICAS DISCRETAS": 6.9,
   "COMUNICACION ORAL Y ESCRITA": 2.6, "FUNDAMENTOS DE PROGRAMACION": 5.9,
@@ -106,6 +111,7 @@ function difLevel(d) {
 }
 
 function difBadge(name) {
+  if (CARRERA !== "ISC") return "";
   const k = norm(name);
   const d = SUBJECT_DIFFICULTY[k];
   if (d == null) return "";
