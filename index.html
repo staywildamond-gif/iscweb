@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mi avance — Ingeniería en Sistemas Computacionales</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -13,7 +14,17 @@
   <div class="wrap">
 
     <header class="hero">
-      <div class="eyebrow">Avance académico · ISC</div>
+      <div class="herotop">
+        <div class="eyebrow">Avance académico · <span id="carreraEyebrow">ISC</span></div>
+        <label class="carrerapick">
+          <span>Carrera</span>
+          <select id="carreraSel" aria-label="Carrera">
+            <option value="ISC">ISC · Sistemas Computacionales</option>
+            <option value="IA">IA · Inteligencia Artificial</option>
+            <option value="LCD">LCD · Ciencia de Datos</option>
+          </select>
+        </label>
+      </div>
       <h1>Mi mapa de la carrera</h1>
     </header>
 
@@ -32,7 +43,7 @@
       <div class="meterwrap">
         <div class="meterhead">
           <div class="metricbox">
-            <div class="big"><span id="creditosOk">0</span><small>de 387 créditos</small></div>
+            <div class="big"><span id="creditosOk">0</span><small>de <span id="totalCred">387</span> créditos</small></div>
             <div class="meterlabel">Créditos aprobados</div>
           </div>
           <div class="metricbox">
@@ -169,8 +180,8 @@
 
     <!-- ========== PESTAÑA 4 · OPTATIVAS ========== -->
     <section class="tabpane" id="pane-optativas">
-      <h2 class="pane-title">Optativas — Rutas de especialización</h2>
-      <p class="pane-sub">Cada rama tiene una materia en 6.° semestre (A1 o B1) y otra en 7.° (A2 o B2). Las que ya elegiste se resaltan.</p>
+      <h2 class="pane-title" id="optTitle">Optativas</h2>
+      <p class="pane-sub" id="optSub"></p>
       <div id="rutasOpt"></div>
     </section>
 
@@ -197,6 +208,7 @@
   <script src="roster.js"></script>
   <script src="metrics.js"></script>
   <script src="schedule.js"></script>
+  <script src="planes.js"></script>
   <script src="optativas.js"></script>
   <script src="maestros_manual.js"></script>
   <script src="cupos.js"></script>
@@ -211,6 +223,7 @@
   <script src="auto.js"></script>
   <script src="export.js"></script>
   <script src="historial-ui.js"></script>
+  <script src="carrera-ui.js"></script>
   <script src="init.js"></script>
 </body>
 </html>

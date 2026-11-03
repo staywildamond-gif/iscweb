@@ -19,31 +19,45 @@ function ramaElegidaDeSlot(slotLabel) {
 }
 
 function renderOptativas() {
-  // Mapa de elecciones (rama elegida por slot)
-  const elecciones = {
-    A1: ramaElegidaDeSlot("A1"),
-    B1: ramaElegidaDeSlot("B1"),
-    A2: ramaElegidaDeSlot("A2"),
-    B2: ramaElegidaDeSlot("B2"),
-  };
+  const slots = PLAN_ACTIVO.slots.map((s) => s.label);
+  const elecciones = {};
+  slots.forEach((l) => { elecciones[l] = ramaElegidaDeSlot(l); });
 
-  // Resumen
   const elegidas = Object.entries(elecciones).filter(([, v]) => v);
   const resumen = elegidas.length === 0
-    ? `<div class="opt-resumen empty">Aún no has elegido ninguna optativa. Ve a <b>Mi avance</b>, ubica las materias <b>Optativa A1/B1/A2/B2</b> y pulsa <b>Maestros</b> para elegir una rama.</div>`
+    ? `<div class="opt-resumen empty">Aún no has elegido ninguna optativa. Ve a <b>Mi avance</b>, ubica las materias <b>Optativa ${slots.join("/")}</b> y pulsa <b>Maestros</b> para elegir.</div>`
     : `<div class="opt-resumen">
-        <div class="opt-count">${elegidas.length} de 4 optativas elegidas</div>
+        <div class="opt-count">${elegidas.length} de ${slots.length} optativas elegidas</div>
         <div class="opt-pills">${elegidas.map(([slot, rama]) =>
           `<span class="opt-pill"><b>${slot}</b> ${esc(rama)}</span>`
         ).join("")}</div>
       </div>`;
 
-  // Cada rama es una "ruta" horizontal: nombre · A1/B1 → A2/B2
+  // Solo ISC tiene ramas (pareja sem 6 -> sem 7). IA y LCD traen un catálogo
+  // plano disponible en los dos semestres, así que se listan como tarjetas.
+  const porRamas = CARRERA === "ISC" && typeof ESPECIALIZACIONES !== "undefined";
+  const cuerpo = porRamas ? rutasPorRama(elecciones) : catalogoPlano(elecciones);
+
+  const t = document.getElementById("optTitle");
+  const sub = document.getElementById("optSub");
+  if (t) t.textContent = porRamas ? "Optativas — Rutas de especialización" : "Optativas";
+  if (sub) {
+    sub.textContent = porRamas
+      ? "Cada rama tiene una materia en 6.° semestre (A1 o B1) y otra en 7.° (A2 o B2). Las que ya elegiste se resaltan."
+      : `Llevas ${slots.length} optativas: ${slots.slice(0, -1).join(", ")} y ${slots[slots.length - 1]}. Las que ya elegiste se resaltan.`;
+  }
+
+  rutasOptEl.innerHTML = resumen + cuerpo;
+}
+
+const normRama = (s) => String(s).toLowerCase()
+  .normalize("NFD").replace(/\p{Diacritic}/gu, "")
+  .replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+
+// ISC: ruta horizontal 6.° -> 7.° por cada una de las 14 especializaciones
+function rutasPorRama(elecciones) {
   const ramas = ESPECIALIZACIONES.map((esp) => {
-    const norm = (s) => String(s).toLowerCase()
-      .normalize("NFD").replace(/\p{Diacritic}/gu, "")
-      .replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-    const elig = (ramaName) => norm(ramaName) === norm(esp.nombre);
+    const elig = (ramaName) => normRama(ramaName) === normRama(esp.nombre);
     const enA1 = elig(elecciones.A1);
     const enB1 = elig(elecciones.B1);
     const enA2 = elig(elecciones.A2);
@@ -78,7 +92,55 @@ function renderOptativas() {
         </div>
       </article>`;
   }).join("");
+  return `<div class="rutas-grid">${ramas}</div>`;
+}
 
-  rutasOptEl.innerHTML = resumen + `<div class="rutas-grid">${ramas}</div>`;
+// Iniciales para el badge, al estilo de los iconos de ESPECIALIZACIONES ("BD", "MD").
+// Ignora las palabras cortas: "Temas selectos de inteligencia artificial" -> "TI".
+function iniciales(nombre) {
+  const largas = String(nombre)
+    .split(/[\s-]+/)
+    .filter((w) => w.length > 3);
+  const base = largas.length ? largas : String(nombre).split(/[\s-]+/);
+  return base.slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "··";
+}
+
+// IA / LCD: una tarjeta por optativa, con su clave de 6.° y la de 7.°
+function catalogoPlano(elecciones) {
+  const porNombre = new Map();
+  PLAN_ACTIVO.optativas.forEach((o) => {
+    if (!porNombre.has(o.nom)) porNombre.set(o.nom, { nom: o.nom, cr: o.cr, claves: {} });
+    porNombre.get(o.nom).claves[o.sem] = o.clave;
+  });
+
+  const elegidasNorm = Object.entries(elecciones)
+    .filter(([, v]) => v)
+    .map(([slot, v]) => ({ slot, n: normRama(v) }));
+
+  const cards = [...porNombre.values()].map((o) => {
+    const hit = elegidasNorm.find((e) => e.n === normRama(o.nom));
+    return `
+      <article class="ruta ${hit ? "elegida" : ""}">
+        <header class="ruta-head">
+          <span class="ruta-badge">${esc(iniciales(o.nom))}</span>
+          <span class="ruta-name">${esc(o.nom)}</span>
+          ${hit ? `<span class="ruta-chip">✓ ${esc(hit.slot)}</span>` : ""}
+        </header>
+        <div class="ruta-pasos">
+          <div class="ruta-paso sem6">
+            <div class="ruta-paso-tag">6.° SEM · ${esc(o.claves[6] || "—")}</div>
+            <div class="ruta-paso-name">${fmt(o.cr)} créditos</div>
+          </div>
+          <div class="ruta-flecha">o</div>
+          <div class="ruta-paso sem7">
+            <div class="ruta-paso-tag">7.° SEM · ${esc(o.claves[7] || "—")}</div>
+            <div class="ruta-paso-name">${fmt(o.cr)} créditos</div>
+          </div>
+        </div>
+      </article>`;
+  }).join("");
+
+  return `<div class="opt-nota">En ${esc(CARRERA)} las optativas no van en pareja 6.° → 7.° como en ISC: es un catálogo plano y cada materia se puede llevar en cualquiera de los dos semestres, con la clave que le toque.</div>
+    <div class="rutas-grid">${cards}</div>`;
 }
 

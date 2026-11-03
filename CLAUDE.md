@@ -10,19 +10,62 @@ Sin backend, sin framework. Todo vive en archivos estáticos servidos en `http:/
 
 **Vanilla JS, sin bundler.** Los datos viven como literales JavaScript (`const X = [...]`) en archivos `.js` cargados con `<script>`. El estado del usuario vive en `localStorage` bajo la clave `avanceISC_v2`.
 
+**Ya NO existe `app.js`.** La lógica está modularizada; `index.html` carga los `.js` en este orden exacto (datos primero, módulos después, `init.js` al final):
+
 ```
 index.html           ← UI + sistema de pestañas
-app.js               ← lógica principal (estado, render, eventos)
 styles.css           ← visual
-schedule.js          ← generado desde horarios.csv + IMG/VESP/horario_completo1.csv (430 ofertas, M+V ISC)
-metrics.js           ← generado desde AESTR_CORREGIDO_3.csv + AESTR_VESPERTINO_plantilla.csv (202 profes M+V)
-maestros_manual.js   ← generado desde maestros_manual.csv (205 links de fuente; se carga con <script> para file://)
-cupos.js             ← generado desde cupos.csv (476 grupo+materia con cupo/inscritos/disponibles)
-roster.js            ← mapeo profes → materias (M + V); aún necesario para resolver OPTATIVA A1/B1
-optativas.js         ← 14 especializaciones (ramas) y sus materias por sem
-build.ps1            ← regenera schedule.js + metrics.js + maestros_manual.js desde los CSV (UTF-8)
-validate.ps1         ← audita choques, horas, profes sin métrica, links faltantes
+
+— DATOS (artefactos derivados, no editar a mano) —
+roster.js            ← 331 entradas profe→materia→grupos (solo ISC); resuelve OPTATIVA A1/B1/A2/B2
+                       y aporta los profes con métrica que no dan clase este periodo
+metrics.js           ← 202 profes con calidad / recomiendan / dificultad (global por profe)
+schedule.js          ← 665 ofertas de las 3 carreras (M+V), con campo `carrera`, 0 choques
+planes.js            ← PLANES: plan, optativas, slots, créditos, maxCred y seriación por carrera
+optativas.js         ← 14 especializaciones (ramas) ISC y sus 2 materias (sem 6 → sem 7)
+maestros_manual.js   ← 205 links a MisProfesores (con <script> para que funcione en file://)
+cupos.js             ← CUPOS (periodo vigente) + CUPOS_HIST (periodos pasados) por grupo+materia
+historial.js         ← historial de periodos (26/2, 27/1)
+
+— MÓDULOS —
+data.js              ← carrera activa + PLAN / OPT_SLOTS / TOTAL / MAX_CRED / KEY derivados de ella
+carrera-ui.js        ← selector de carrera del header (cambiar recarga la página)
+core.js              ← norm(), cupoDe(), turnoDeGrupo(), helpers compartidos
+avance.js            ← pestaña Mi avance
+maestros.js          ← pestaña Maestros
+horario.js           ← pestaña Generar horario (rejilla, choques)
+optativas-ui.js      ← pestaña Optativas
+auto.js              ← modo Auto + SERIACION
+export.js            ← exportar horario a JPG / XLSX
+historial-ui.js      ← pestaña Historial
+init.js              ← arranque
+
+— HERRAMIENTAS —
+build-data.ps1       ← genera planes.js + schedule.js desde el HTML de data/ (las 3 carreras)
+build.ps1            ← genera metrics.js + maestros_manual.js + cupos.js desde los CSV (UTF-8)
+validate.ps1         ← audita choques, horas, profes sin métrica, links y cobertura por carrera
+auditoria/pdf2png.sh ← renderiza un PDF a PNG (pdf.js + Edge headless)
 ```
+
+**Quién genera qué** (no los cruces): `build-data.ps1` manda sobre `planes.js` y `schedule.js`; `build.ps1` sobre `metrics.js`, `maestros_manual.js` y `cupos.js`. `horarios.csv` y `IMG/VESP/horario_completo1.csv` quedaron como respaldo histórico de ISC 27/1 y ya no alimentan nada.
+
+**Carrera activa:** `carreraActiva()` vive en `data.js` (tiene que cargar antes que todo lo demás) y lee `localStorage["escom_carrera"]`, default `ISC`. De ahí salen, **en tiempo de carga**:
+
+```
+CARRERA        "ISC" | "IA" | "LCD"
+PLAN_ACTIVO    PLANES[CARRERA]
+PLAN           [{ sem, materias: [[nombre, créditos], …] }]  ← forma heredada, derivada
+OPT_SLOTS      posición de cada slot; cambia por carrera (ISC sem 6 tiene 5 obligatorias, IA 4)
+TOTAL          387 / 351 / 366
+MAX_CRED       55 en las tres
+KEY            "avanceISC_v2" para ISC · "avance_<CAR>_v1" para las otras
+```
+
+Como todo eso se calcula al cargar, **cambiar de carrera recarga la página** (`carrera-ui.js`). No intentes recalcularlo en caliente.
+
+Todo lo que lea `SCHEDULE` debe pasar por **`schedActual()`** (en `core.js`), que filtra por `CARRERA`; si lees `SCHEDULE` directo, se cuelan las ofertas de las otras dos carreras.
+
+**El orden del plan importa.** Los ids de materia son `s{semestre0}-{índice0}` y el avance guardado en `localStorage` se indexa por ellos. Ese orden sale del **orden de las filas de `nombres.csv`**, no de la clave. Reordenar ese CSV le mueve el avance al usuario.
 
 ### Fuentes canónicas (CSVs editables a mano)
 
@@ -33,7 +76,28 @@ IMG/VESP/horario_completo1.csv  ← Vesp ISC, 190 filas, sin choques, YA en sche
 AESTR_VESPERTINO_plantilla.csv  ← Vesp ISC, calificaciones 105 maestros, YA en metrics.js (parte V)
 maestros_manual.csv             ← nombre,link_fuente (links de MisProfesores). IS LA VERDAD para maestros_manual.js
 cupos.csv                       ← grupo,codigo,materia,semestre,cupo,inscritos,disponibles. IS LA VERDAD para cupos.js
+nombres.csv                     ← carrera,clave,nombre,nombre_saes. Cómo se ve cada materia en la app
+                                   y en qué orden va dentro de su semestre. IS LA VERDAD para planes.js
 ```
+
+**`nombres.csv`:** el gestor escribe todo en mayúsculas, a veces sin acentos, y las optativas de ISC vienen como `RAMA|NOMBRE EN INGLÉS`. Este CSV traduce clave → nombre legible. Se generó una vez (ISC desde el `PLAN` que estaba a mano en `data.js` y desde `optativas.js`; IA y LCD desde los PDFs oficiales y un diccionario de acentos) y de ahí en adelante **se edita a mano**. `nombre_saes` es la llave para cruzar con `schedule.js`: no la toques.
+
+### Fuentes oficiales en `data/` (HTML de SAES + PDFs del plan)
+
+Todo lo que viene de ESCOM vive aquí, en HTML tal cual se copió de SAES. **Es la matriz**: los CSV y los `.js` se derivan de esto. Editable a mano en cualquier editor.
+
+```
+data/isc/mp.html          ← mapa curricular: No periodo · Clave · Nombre · Tipo · Créditos · Hrs teoría · Hrs práctica
+data/isc/opta.html        ← página de optativas (nombre + link al PDF del programa)
+data/isc/horario-m.html   ← horario matutino: Grupo · Asignatura · Profesor · Edificio · Salón · Lun–Sáb
+data/isc/horario-v.html   ← horario vespertino
+data/isc/*.pdf            ← mapa curricular oficial + mapa de optativas (aquí vive la SERIACIÓN)
+data/ia/   …  igual, sin opta.html (las optativas de IA salen del mp + el PDF)
+data/lcd/  …  igual
+data/_descartados/        ← fuentes redundantes o incompletas; no usar
+```
+
+**Regla:** el HTML de `data/` manda. Si SAES cambia, se reemplaza el HTML y se regenera todo. Los `deepseek_csv_*.txt` que venían con estos datos estaban truncados — están en `_descartados/`.
 
 **Cupos (ocupabilidad):** se cruzan con `schedule.js` por **grupo + norm(materia)** (`cupoDe()` en core.js). 429/430 ofertas cruzan (grupos `XCX` de Trabajo Terminal/optativas mixtas no tienen horario, no aplican). La etiqueta `cupoBadge()` muestra "N lugares" (verde >5 · amarillo ≤5) · "Lleno" (disp 0) · "Sobrecupo" (disp <0), en las tarjetas de oferta y en la rejilla del horario. Es una **foto** del momento: cuando el usuario mande datos nuevos, actualizar `cupos.csv` y correr `build.ps1`.
 
@@ -49,10 +113,14 @@ cupos.csv                       ← grupo,codigo,materia,semestre,cupo,inscritos
 - Cada materia del plan tiene un id `s{semestre0}-{índice0}` (ej. Cálculo de 1.er sem = `s0-0`).
 - Cada grupo se codifica `[1-8][A-Z][MV][1-9]`:
   - 1.º carácter: semestre (1-8)
-  - 2.º carácter: **carrera** — `C`=ISC, `A`=Ing. en IA, `B`=Lic. Cs. Datos
+  - 2.º carácter: **carrera** — `C`=ISC, `B`=Ing. en IA, `A`=Lic. Cs. Datos
   - 3.º carácter: **turno** — `M`=matutino, `V`=vespertino
   - 4.º+: # de grupo (1-10)
-- Ej: `6CV3` = 6.º sem, ISC, vespertino, grupo 3.
+- Ej: `6CV3` = 6.º sem, ISC, vespertino, grupo 3. `1BM1` = 1.er sem, IA, matutino, grupo 1. `7AV2` = 7.º sem, LCD, vespertino, grupo 2.
+
+> ⚠️ **`A` y `B` estaban invertidas en versiones anteriores de este archivo.** Lo correcto es `B`=IA y `A`=LCD; lo confirman las claves de materia del mapa curricular oficial (`B101` para IA, `A101` para LCD) y los grupos reales (`1BM1` en IA, `1AM1` en LCD).
+
+- La **clave oficial de materia** es el identificador primario: `C###` (ISC), `B###` (IA), `A###` (LCD). Viene del mapa curricular (`data/<carrera>/mp.html`). El nombre normalizado con `norm()` se usa solo para cruzar fuentes que no traen clave (horarios, métricas).
 
 ---
 
@@ -179,7 +247,7 @@ Cuando el usuario quiere actualizar un horario o calificaciones, el flujo SIEMPR
 ## 6. Estado actual (snapshot)
 
 ### ✅ Completado
-- Plan estudios completo (47 materias, 387 créditos)
+- Plan estudios ISC completo (46 obligatorias + 4 slots de optativa = 50 entradas, 387 créditos)
 - Sistema status derivado de calif + veces cursada
 - Pestaña Mi avance: barra continua, calif por materia, badge estado, drop maestros
 - Pestaña Maestros: 6 colores, dropdown ordenamiento (8 criterios), materias toggleables verde/rojo, agregar materia manualmente
@@ -194,8 +262,11 @@ Cuando el usuario quiere actualizar un horario o calificaciones, el flujo SIEMPR
   - Materias regulares: el dropdown muestra ofertas M y V juntas (grupo identifica el turno)
 - **Optativas vespertinas:** NO tienen división A/B como matutino. `scheduleFor()` muestra TODAS las optativas V del semestre en ambos slots (A1/B1, A2/B2); matutino conserva su filtro A/B exacto por roster. Si ESCOM define un A/B oficial para V, pedirlo al usuario.
 
+- **MULTI-CARRERA**: selector en el header, plan/créditos/slots/optativas por carrera, 665 ofertas de las 3 con 0 choques. ISC 387 cr · IA 351 · LCD 366.
+
 ### ⏳ Pendiente
-1. Eventualmente: **Ing. en IA** (códigos `XAM/XAV`) e **Lic. Cs. Datos** (`XBM/XBV`).
+1. Métricas, links y cupos de los profes de IA/LCD (el usuario los trae; ver `PROFES-SIN-METRICA.md`).
+2. `SUBJECT_DIFFICULTY` sigue siendo de ISC; en IA/LCD solo aparece donde el nombre coincide.
 
 ---
 
@@ -216,3 +287,64 @@ Cuando el usuario quiere actualizar un horario o calificaciones, el flujo SIEMPR
 - **No borrar `roster.js`** aunque parezca duplicado con `schedule.js` — sigue siendo necesario para resolver optativas.
 - **No suponer profes** para los grupos del vespertino — el usuario los validará uno a uno.
 - **No agregar features no pedidas.** Las 17 reglas (+ rediseño status) son el alcance acordado por ahora.
+
+---
+
+## 9. Decisiones multi-carrera (confirmadas por el usuario, 2026-11-02)
+
+**Arquitectura**
+
+- **Una sola app** con selector de carrera, no páginas separadas.
+- Cada oferta y cada materia llevan **campo `carrera` explícito** (`ISC` / `IA` / `LCD`), aunque el grupo también lo codifique. No derivarlo en caliente.
+- **La clave oficial es el identificador primario** de materia (`C101`, `B101`, `A101`), no el nombre normalizado.
+- `localStorage`: **una clave por carrera**. Un usuario lleva **una sola carrera activa**; si cambia de carrera, vuelve a capturar su avance a mano (no se migra entre carreras).
+- Las **métricas de profesores son globales por profesor**, no por carrera: un profe da clase en 2 o 3 carreras (de 261 profes, muchos se comparten).
+- `historial.js` (periodos) sí se separa **por carrera**.
+- El HTML de `data/` es la fuente; de ahí se derivan los `.js`. A futuro todo esto migra a **PostgreSQL (pgAdmin)** — por eso el modelo debe quedar normalizado y con claves oficiales.
+
+**Planes de estudio (derivado de `data/<carrera>/mp.html` + los PDFs oficiales)**
+
+Las tres carreras tienen la **misma estructura**: 4 slots de optativa de 7.5 cr (2 en sem 6, 2 en sem 7) = 30 cr.
+
+| Carrera | Obligatorias | Créd. oblig. | Slots optativa | **Total** | Semestre más pesado |
+|---|---|---|---|---|---|
+| ISC | 46 | 357 | A1, B1 (sem 6) · A2, B2 (sem 7) | **387** | sem 4 = 55.5 cr |
+| IA | 41 | 321 | A, B (sem 6) · C, D (sem 7) | **351** | sem 1 = 51 cr |
+| LCD | 40 | 336 | A, B (sem 6) · C, D (sem 7) | **366** | sem 4 y sem 7 = 52.5 cr |
+
+- `MAX_CRED` = **55 créditos, igual para las tres carreras.** Es un tope **institucional** de ESCOM, no sale del plan. La columna "semestre más pesado" de la tabla es solo informativa — nota que ISC sem 4 pide 55.5 cr, o sea que un 4.º semestre completo ya no cabe en una sola reinscripción.
+- **En la UI:** la pestaña Optativas muestra las 14 rutas `6.° → 7.°` solo en ISC (`rutasPorRama()`); en IA y LCD muestra el catálogo plano en tarjetas (`catalogoPlano()`). Y `scheduleFor()` resuelve los slots de IA/LCD por **nombre de optativa del semestre**, no por `ROSTER` ni por el `|` de la rama.
+
+**Pestaña Maestros**
+
+- **La lista NO se separa por carrera.** `TEACHERS` sale de **todo** `SCHEDULE` (las tres carreras) más `ROSTER`, que aporta los profes con métrica que no dan clase este periodo. Las calificaciones son globales por profesor y un maestro da donde da, así que separarlos escondía información. El selector de carrera manda sobre el plan y sobre las ofertas del horario, **no** sobre quién aparece aquí.
+- Cada maestro lleva badges de en qué carreras da (`carreraBadges()`), con la carrera activa resaltada. Y `ofertasDeMaestro()` devuelve su horario completo, de las tres carreras: así se ve que `HURTADO AVILÉS GABRIEL` da 4 grupos de ISC y 1 de IA.
+- "Materias por periodo" en la ficha solo tiene datos de ISC, porque los cupos de IA/LCD todavía no llegan.
+- **Cuidado con los acentos.** `schedule.js` guarda los nombres normalizados y `metrics.js` / `roster.js` / `maestros_manual.csv` los conservan: 25 de los 202 maestros con métrica traen acento. Por eso el cruce va siempre por `norm()` — `TEACHER_METRICS_NORM` para la métrica, `NOMBRE_PROF` para elegir el nombre que se muestra (gana el acentuado) y la llave normalizada en `allTeachers()`. Si lo cruzas por nombre crudo, el mismo profe sale dos veces y pierde su calificación.
+- **Optativas de IA y LCD NO tienen ramas A/B como ISC.** En ISC cada rama es una pareja sem 6 → sem 7 de materias **distintas** (14 ramas, 28 materias, 28 claves). En IA y LCD es un **catálogo plano disponible en los dos semestres**: las 14 optativas de IA tienen clave de sem 6 (`B640`–`B653`) *y* de sem 7 (`B740`–`B753`); las 13 de LCD igual (`A620`–`A632` y `A720`–`A732`). Por eso `roster.js` no necesita extenderse a IA/LCD.
+- **Fuente de verdad: el gestor de la escuela (`mp.html`), no el PDF.** El PDF de optativas reparte el catálogo de IA y LCD en dos columnas (6.º y 7.º semestre) como si cada optativa perteneciera a un solo semestre; eso es **solo informativo**. Lo que vale es SAES: cada optativa existe en ambos semestres con su propia clave. (El PDF sí es la fuente para la **seriación**, porque SAES no la trae.)
+- **`mp.html` de IA tiene el bloque de 7.º semestre duplicado** (`B701`, `B702`, `B703` y `B740`–`B753` salen dos veces). Hay que deduplicar al parsear, o IA parece tener 44 obligatorias y 348 cr en vez de 41 y 321.
+
+**Seriación: solo ISC la tiene**
+
+- El mapa oficial de ISC **dibuja ~21 flechas** de prerrequisito; de ahí salió la `SERIACION` de `auto.js`.
+- Los mapas de **IA y LCD no dibujan ninguna flecha**, y SAES tampoco trae columna de prerrequisito. **No existe seriación oficial para esas dos carreras.** Lo que hay en `planes.js` (12 pares para IA, 11 para LCD) es una **propuesta por encadenamiento de nombres, aprobada por el usuario el 2026-11-02**, no un dato de ESCOM. Si ESCOM publica la oficial, manda ella. No agregues pares nuevos sin preguntar.
+- La seriación vive **solo** en `planes.js`, como `PLANES[carrera].seriacion`, con **clave → [claves]**. `auto.js` ya no tiene su propia copia. El puente entre la clave oficial y el id de posición del plan (`s1-2`) son `ID_DE_CLAVE` / `CLAVE_DE_ID`, en `data.js`.
+- `prereqsAprobados(id)` y `prereqFaltante(id)` reciben el **id de la materia**, no su nombre: por nombre no se podía distinguir entre carreras.
+- Para ver un mapa: `data/<carrera>/mapa.png` es el PDF ya renderizado. Se regenera con `auditoria/pdf2png.sh <pdf> <png> [ancho]`, que usa pdf.js + Edge headless (en esta máquina no hay `pdftoppm` ni `pdftocairo`, y `pdftotext` saca el texto pero no los trazos).
+
+**Datos que el usuario traerá después**
+
+- Calificaciones de los profes sin métrica (ver `PROFES-SIN-METRICA.md`) → se integran a `metrics.js` y sus links a `maestros_manual.csv`.
+- Cupos de IA y LCD. Mientras no estén, sus ofertas se muestran **sin badge de cupo**.
+- Historial de periodos de IA y LCD.
+
+**Casos especiales ya acordados**
+
+- **Trabajo Terminal es especial, igual que en ISC**: `grupo + norm(materia)` no es llave única (en IA, `8BM1 TRABAJO TERMINAL II` tiene 3 asesores distintos y `8BM2` tiene 2). Para TT hay que meter el profesor en la llave.
+- **IA viene casi sin salón**: 79 de 85 ofertas matutinas y 44 de 54 vespertinas traen `Edificio = X` y `Salón = X`. Se deja **vacío**, no es error.
+- **Grupo número ≥ 6 = grupo de recurse.** Los regulares son 1–5. Así se leen `1CM7`–`1CM9`, `1CV6`, `1CV7`, `2CM6`, `2CV6`, `4CM6`.
+- **No hay grupo `1CM6`** en este periodo. No es un dato perdido.
+- **La rejilla de grupos del HTML es la realidad del periodo**, no una extracción incompleta. IA y LCD abren 1 o 2 grupos por semestre, y de 4.º en adelante casi siempre 1 solo. `validate.ps1` no debe marcar como error un grupo ausente — se toma lo que haya en el HTML, directo.
+- Las **horas de teoría/práctica** del mapa se guardan como dato informativo (recomendación de carga), no se usan para validar.
+- Ventanas del modo Auto (`M = 07:00–15:00`, `V = 12:00–21:30`) aplican igual a las tres carreras.

@@ -1,4 +1,17 @@
 // ============================================================
+//  CARRERA ACTIVA
+// ============================================================
+// `CARRERA`, `carreraActiva()` y `PLAN_ACTIVO` viven en data.js, que carga antes
+// que este archivo. Aquí solo lo que se usa en tiempo de ejecución.
+
+// Ofertas de la carrera activa. TODO lo que lea SCHEDULE debe pasar por aquí,
+// o se cuelan las ofertas de las otras dos carreras.
+function schedActual() {
+  const sched = typeof SCHEDULE !== "undefined" ? SCHEDULE : [];
+  return sched.filter((e) => e.carrera === CARRERA);
+}
+
+// ============================================================
 //  PERSISTENCIA
 // ============================================================
 let memFallback = null;
@@ -163,7 +176,7 @@ function manualMetricFor(name) {
 function getMetric(name) {
   // El manual (maestros_manual.js) gana; si falta un campo, cae al seed de metrics.js.
   const man = manualMetricFor(name) || {};
-  const seed = (typeof TEACHER_METRICS !== "undefined" && TEACHER_METRICS[name]) || {};
+  const seed = TEACHER_METRICS_NORM[norm(name)] || {};
   const pick = (k) =>
     man[k] !== undefined && man[k] !== null && man[k] !== "" ? man[k]
     : seed[k] !== undefined && seed[k] !== null && seed[k] !== "" ? seed[k]
@@ -218,8 +231,17 @@ function subjectName(s, i) {
 function scheduleFor(s, i) {
   const id = idOf(s, i);
   const slot = OPT_SLOTS[id];
-  const sched = typeof SCHEDULE !== "undefined" ? SCHEDULE : [];
+  const sched = schedActual();
   if (slot) {
+    // IA y LCD no tienen ramas A/B ni roster: el slot acepta cualquier optativa
+    // de ese semestre que ESCOM haya abierto este periodo.
+    if (CARRERA !== "ISC") {
+      const nombres = new Set(
+        PLAN_ACTIVO.optativas.filter((o) => o.sem === slot.sem).map((o) => norm(o.saes))
+      );
+      const sc = String(slot.sem);
+      return sched.filter((e) => e.grupo.startsWith(sc) && nombres.has(norm(e.materia)));
+    }
     const profs = new Set(
       ROSTER.filter((e) => e.m === "OPTATIVA " + slot.label).map((e) => e.t)
     );
@@ -256,6 +278,31 @@ function itemsConflict(a, b) {
 }
 
 // Lista única de maestros (para la pestaña Maestros)
+// `schedule.js` guarda los nombres normalizados (sin acentos) y `metrics.js`,
+// `roster.js` y `maestros_manual.csv` los conservan. Sin estos dos índices, el
+// mismo profe sale dos veces en la lista y pierde su métrica.
+const TEACHER_METRICS_NORM = (() => {
+  const m = {};
+  if (typeof TEACHER_METRICS !== "undefined") {
+    Object.keys(TEACHER_METRICS).forEach((k) => { m[norm(k)] = TEACHER_METRICS[k]; });
+  }
+  return m;
+})();
+
+// Nombre para mostrar: gana el que traiga acentos.
+const NOMBRE_PROF = (() => {
+  const m = new Map();
+  const put = (n) => {
+    if (!n) return;
+    const k = norm(n);
+    if (!m.has(k) || n !== k) m.set(k, n);
+  };
+  if (typeof TEACHER_METRICS !== "undefined") Object.keys(TEACHER_METRICS).forEach(put);
+  if (typeof ROSTER !== "undefined") ROSTER.forEach((e) => put(e.t));
+  return m;
+})();
+function nombreProf(n) { return NOMBRE_PROF.get(norm(n)) || n; }
+
 function allTeachers() {
   // Índice rápido: materia → primer índice de semestre del plan
   const matToSem = new Map();
@@ -265,24 +312,40 @@ function allTeachers() {
   }));
 
   const map = {};
+  // Indexado por nombre normalizado para que "MOLINA PÉREZ" y "MOLINA PEREZ"
+  // sean el mismo maestro.
+  const add = (nombre) => {
+    const k = norm(nombre);
+    if (!map[k]) map[k] = { name: nombreProf(nombre), materias: new Set(), grupos: new Set(), semestres: new Set() };
+    return map[k];
+  };
+
+  // Fuente principal: las ofertas reales de LAS TRES carreras. La lista de
+  // maestros no se separa por carrera (las métricas son globales); el selector
+  // de carrera manda sobre el plan y el horario, no sobre quién aparece aquí.
+  const ofertas = typeof SCHEDULE !== "undefined" ? SCHEDULE : [];
+  ofertas.forEach((o) => {
+    if (!o.profesor) return;
+    const t = add(o.profesor);
+    t.materias.add(o.materia);
+    if (o.grupo) { t.grupos.add(o.grupo); t.semestres.add(parseInt(o.grupo[0])); }
+  });
+
+  // ROSTER es solo de ISC, pero suma: trae los profes con métrica que no dan clase
+  // este periodo, y los nombres de slot OPTATIVA A1/B1/A2/B2 que el horario no usa.
   ROSTER.forEach((e) => {
-    if (!map[e.t]) map[e.t] = { name: e.t, materias: new Set(), grupos: new Set(), semestres: new Set() };
-    map[e.t].materias.add(e.m);
+    const t = add(e.t);
+    t.materias.add(e.m);
     // Extraer grupos del campo g (ej: "1CM1, 1CM5" o "6CM3 (Big Data)")
     (e.g || "").split(",").forEach((gp) => {
       const m = gp.trim().match(/^[1-8][A-Z]{2}\d+/);
-      if (m) { map[e.t].grupos.add(m[0]); map[e.t].semestres.add(parseInt(m[0][0])); }
+      if (m) { t.grupos.add(m[0]); t.semestres.add(parseInt(m[0][0])); }
     });
-    // Semestre desde SCHEDULE (más confiable) o desde matToSem
     const semFromMat = matToSem.get(norm(e.m));
-    if (semFromMat) map[e.t].semestres.add(semFromMat);
-  });
-  // Para optativas, derivar semestre del slot (OPTATIVA A1/B1 → 6, A2/B2 → 7)
-  ROSTER.forEach((e) => {
+    if (semFromMat) t.semestres.add(semFromMat);
+    // Para optativas, derivar semestre del slot (A1/B1 → 6, A2/B2 → 7)
     const optMatch = e.m.match(/OPTATIVA\s+([AB])([12])/);
-    if (optMatch && map[e.t]) {
-      map[e.t].semestres.add(optMatch[2] === "1" ? 6 : 7);
-    }
+    if (optMatch) t.semestres.add(optMatch[2] === "1" ? 6 : 7);
   });
 
   return Object.values(map).map((x) => ({
@@ -294,10 +357,31 @@ function allTeachers() {
 }
 const TEACHERS = allTeachers();
 
-// Catálogo de todas las materias (para el menú "Agregar materia")
+// En qué carreras da clase cada profe (las métricas son globales, un profe se
+// comparte entre carreras).
+const CARRERAS_DE_PROF = (() => {
+  const m = new Map();
+  (typeof SCHEDULE !== "undefined" ? SCHEDULE : []).forEach((o) => {
+    if (!o.profesor) return;
+    const k = norm(o.profesor);
+    if (!m.has(k)) m.set(k, new Set());
+    m.get(k).add(o.carrera);
+  });
+  return m;
+})();
+
+function carreraBadges(name) {
+  const set = CARRERAS_DE_PROF.get(norm(name));
+  if (!set || set.size === 0) return "";
+  return [...set].sort().map((c) =>
+    `<span class="cbadge c-${c.toLowerCase()}${c === CARRERA ? " propia" : ""}" title="${c}">${c}</span>`
+  ).join("");
+}
+
+// Catálogo de materias de la carrera activa (para el menú "Agregar materia")
 const ALL_MATERIAS = (() => {
   const seen = new Set(); const out = [];
-  ROSTER.map((e) => e.m).sort((a, b) => a.localeCompare(b)).forEach((m) => {
+  TEACHERS.flatMap((t) => t.materias).sort((a, b) => a.localeCompare(b)).forEach((m) => {
     const k = norm(m); if (!seen.has(k)) { seen.add(k); out.push(m); }
   });
   return out;
@@ -325,9 +409,11 @@ function titleCase(s) {
   return String(s).toLowerCase().replace(/(^|\s|\()([a-záéíóúñ])/g, (m) => m.toUpperCase());
 }
 
-// Materias roster (las que imparte este semestre) de un maestro
+// Materias que imparte un maestro en la carrera activa (horario + roster en ISC).
+// Sale de TEACHERS, que ya hizo esa unión.
+const _matsPorProf = new Map(TEACHERS.map((t) => [t.name, t.materias]));
 function rosterMatsOf(name) {
-  return [...new Set(ROSTER.filter((e) => e.t === name).map((e) => e.m))];
+  return _matsPorProf.get(name) || [];
 }
 
 // Lista de materias del maestro con su estado activo (verde) / inactivo (rojo)

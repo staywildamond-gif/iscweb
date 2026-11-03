@@ -54,66 +54,46 @@ function shuffle(arr) {
   return a;
 }
 // ============================================================
-//  SERIACIÓN (linealidad del plan, según la imagen del mapa curricular)
-//  dependiente → [prerequisito(s)]. La dependiente SOLO se puede meter en
-//  modo Auto si TODOS sus prerequisitos están APROBADOS (si alguno está
-//  reprobado o pendiente, se bloquea). Excepción del usuario marcada (★).
+//  SERIACIÓN
 // ============================================================
-const SERIACION = {
-  "CALCULO APLICADO": ["CALCULO"],
-  "ALGEBRA LINEAL": ["ANALISIS VECTORIAL"],                                   // ★ excepción (no Mecánica)
-  "ALGORITMOS Y ESTRUCTURA DE DATOS": ["FUNDAMENTOS DE PROGRAMACION"],
-  "ECUACIONES DIFERENCIALES": ["CALCULO APLICADO"],
-  "CIRCUITOS ELECTRICOS": ["MECANICA Y ELECTROMAGNETISMO"],
-  "ANALISIS Y DISENO DE ALGORITMOS": ["ALGORITMOS Y ESTRUCTURA DE DATOS"],
-  "PARADIGMAS DE PROGRAMACION": ["ALGORITMOS Y ESTRUCTURA DE DATOS"],
-  "ELECTRONICA ANALOGICA": ["CIRCUITOS ELECTRICOS"],
-  "DISENO DE SISTEMAS DIGITALES": ["FUNDAMENTOS DE DISENO DIGITAL"],
-  "TEORIA DE LA COMPUTACION": ["ANALISIS Y DISENO DE ALGORITMOS"],
-  "TECNOLOGIAS PARA DESARROLLO DE APLICACIONES WEB": ["BASES DE DATOS"],
-  "MATEMATICAS AVANZADAS PARA LA INGENIERIA": ["ECUACIONES DIFERENCIALES"],
-  "ARQUITECTURA DE COMPUTADORAS": ["DISENO DE SISTEMAS DIGITALES"],
-  "COMPILADORES": ["ANALISIS Y DISENO DE ALGORITMOS"],
-  "INSTRUMENTACION Y CONTROL": ["ELECTRONICA ANALOGICA"],
-  "SISTEMAS EN CHIP": ["ARQUITECTURA DE COMPUTADORAS"],
-  "PROCESAMIENTO DIGITAL DE SENALES": ["MATEMATICAS AVANZADAS PARA LA INGENIERIA"],
-  "INGENIERIA DE SOFTWARE": ["ANALISIS Y DISENO DE SISTEMAS"],
-  "APLICACIONES PARA COMUNICACIONES EN RED": ["REDES DE COMPUTADORAS"],
-  "ADMINISTRACION DE SERVICIOS EN RED": ["REDES DE COMPUTADORAS"],
-  "SISTEMAS DISTRIBUIDOS": ["SISTEMAS OPERATIVOS"],
-};
+// Vive en `planes.js` como PLAN_ACTIVO.seriacion, con clave → [claves].
+// Una materia SOLO entra en modo Auto si TODOS sus prerrequisitos están
+// APROBADOS (si alguno está reprobado o pendiente, se bloquea).
+//
+// ISC sale de las flechas del mapa oficial. IA y LCD no tienen seriación
+// oficial (sus mapas no dibujan flechas): lo que hay es una propuesta por
+// nombres que el usuario aprobó. Ver CLAUDE.md §9.
 const VENTANA_SEM = 3; // máximo de semestres que puede abarcar el horario auto
 
-function buscarMateriaPlan(normName) {
-  for (let s = 0; s < PLAN.length; s++) {
-    const arr = PLAN[s].materias;
-    for (let i = 0; i < arr.length; i++) {
-      if (norm(arr[i][0]) === normName) return { s, i, id: idOf(s, i), name: arr[i][0] };
-    }
-  }
-  return null;
+// Materia del plan a partir de su clave oficial
+function materiaPorClave(clave) {
+  const id = ID_DE_CLAVE[clave];
+  if (!id) return null;
+  const m = id.match(/^s(\d+)-(\d+)$/);
+  if (!m) return null;
+  const s = +m[1], i = +m[2];
+  const entry = PLAN[s] && PLAN[s].materias[i];
+  if (!entry) return null;
+  return { s, i, id, name: entry[0] };
 }
 
-// ¿Los prerequisitos de la materia están todos aprobados? (sin prereq = libre)
-function prereqsAprobados(name) {
-  const reqs = SERIACION[norm(name)];
-  if (!reqs || !reqs.length) return true;
-  return reqs.every((rn) => {
-    const mt = buscarMateriaPlan(rn);
-    if (!mt) return true; // prereq no hallado en el plan: no bloquear
-    return getSub(mt.id, mt.name).status === "aprobada";
-  });
+// Prerrequisitos pendientes de una materia del plan, por su id (s{sem}-{i})
+function prereqsFaltantesDe(id) {
+  const clave = CLAVE_DE_ID[id];
+  if (!clave) return [];
+  const reqs = (PLAN_ACTIVO.seriacion || {})[clave];
+  if (!reqs || !reqs.length) return [];
+  return reqs
+    .map(materiaPorClave)
+    .filter((mt) => mt && getSub(mt.id, mt.name).status !== "aprobada");
 }
 
-// Nombre legible del/los prereq(s) que faltan por aprobar (para el mensaje)
-function prereqFaltante(name) {
-  const reqs = SERIACION[norm(name)];
-  if (!reqs) return null;
-  for (const rn of reqs) {
-    const mt = buscarMateriaPlan(rn);
-    if (mt && getSub(mt.id, mt.name).status !== "aprobada") return mt.name;
-  }
-  return null;
+function prereqsAprobados(id) { return prereqsFaltantesDe(id).length === 0; }
+
+// Nombre legible del primer prereq que falta (para el mensaje)
+function prereqFaltante(id) {
+  const f = prereqsFaltantesDe(id);
+  return f.length ? f[0].name : null;
 }
 
 // Ajusta la ventana horaria sugerida según el turno elegido
@@ -172,14 +152,14 @@ function generarHorarioAuto() {
   }
 
   // 2) Seriación: la dependiente solo entra si su prerequisito está aprobado
-  const bloqueadasSer = pendientes.filter((f) => !prereqsAprobados(f.name));
-  let faltantes = pendientes.filter((f) => prereqsAprobados(f.name));
+  const bloqueadasSer = pendientes.filter((f) => !prereqsAprobados(f.id));
+  let faltantes = pendientes.filter((f) => prereqsAprobados(f.id));
 
   if (faltantes.length === 0) {
     autoPool = []; autoLastKey = null; autoCtx = null;
     if (otraBtn) otraBtn.hidden = true;
     const ejemplo = bloqueadasSer[0];
-    const req = ejemplo ? prereqFaltante(ejemplo.name) : null;
+    const req = ejemplo ? prereqFaltante(ejemplo.id) : null;
     resultEl.innerHTML = `<div class="auto-warn">Todas las pendientes están bloqueadas por seriación` +
       (req ? ` (ej.: <b>${esc(ejemplo.name)}</b> necesita aprobar <b>${esc(req)}</b>)` : "") +
       `. Aprueba/captura los prerequisitos primero o agrégalas a mano.</div>`;

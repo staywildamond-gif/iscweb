@@ -238,7 +238,11 @@ function renderDrop(drop, s, i) {
 
       // Si es optativa y se está agregando, fija el nombre con la rama
       if (isOpt && adding) {
-        const rama = entry.materia.includes("|") ? entry.materia.split("|")[0].trim() : "";
+        // ISC guarda "RAMA|NOMBRE EN INGLÉS": nos quedamos con la rama.
+        // IA y LCD no tienen ramas, así que el nombre de la materia es el que va.
+        const rama = entry.materia.includes("|")
+          ? entry.materia.split("|")[0].trim()
+          : entry.materia.trim();
         if (rama) {
           setSub(id, { name: "Optativa " + OPT_SLOTS[id].label + " · " + titleCase(rama) });
           const nameEl = drop.closest(".subject").querySelector(".name");

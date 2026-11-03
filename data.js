@@ -1,43 +1,64 @@
 // ============================================================
-//  PLAN DE ESTUDIOS — ISC
+//  CARRERA ACTIVA
 // ============================================================
-const PLAN = [
-  { sem: "1.er semestre", materias: [
-    ["Cálculo", 7.5], ["Análisis vectorial", 7.5], ["Matemáticas discretas", 10.5],
-    ["Comunicación oral y escrita", 7.5], ["Fundamentos de programación", 7.5],
-  ]},
-  { sem: "2.º semestre", materias: [
-    ["Algoritmos y estructura de datos", 7.5], ["Álgebra lineal", 9], ["Cálculo aplicado", 7.5],
-    ["Mecánica y electromagnetismo", 10.5], ["Ingeniería, ética y sociedad", 9], ["Fundamentos económicos", 7.5],
-  ]},
-  { sem: "3.er semestre", materias: [
-    ["Análisis y diseño de algoritmos", 7.5], ["Paradigmas de programación", 7.5], ["Ecuaciones diferenciales", 9],
-    ["Fundamentos de diseño digital", 7.5], ["Circuitos eléctricos", 7.5], ["Bases de datos", 7.5], ["Finanzas empresariales", 7.5],
-  ]},
-  { sem: "4.º semestre", materias: [
-    ["Teoría de la computación", 7.5], ["Probabilidad y estadística", 9], ["Matemáticas avanzadas para la ingeniería", 9],
-    ["Diseño de sistemas digitales", 7.5], ["Electrónica analógica", 7.5],
-    ["Tecnologías para desarrollo de aplicaciones web", 7.5], ["Sistemas operativos", 7.5],
-  ]},
-  { sem: "5.º semestre", materias: [
-    ["Compiladores", 7.5], ["Procesamiento digital de señales", 7.5], ["Arquitectura de computadoras", 7.5],
-    ["Instrumentación y control", 7.5], ["Análisis y diseño de sistemas", 7.5],
-    ["Formulación y evaluación de proyectos informáticos", 6], ["Redes de computadoras", 7.5],
-  ]},
-  { sem: "6.º semestre", materias: [
-    ["Inteligencia artificial", 7.5], ["Sistemas en chip", 7.5], ["Métodos cuantitativos para la toma de decisiones", 7.5],
-    ["Ingeniería de software", 7.5], ["Aplicaciones para comunicaciones en red", 7.5],
-    ["Optativa A1", 7.5], ["Optativa B1", 7.5],
-  ]},
-  { sem: "7.º semestre", materias: [
-    ["Trabajo terminal I", 12], ["Sistemas distribuidos", 7.5], ["Desarrollo de aplicaciones móviles nativas", 7.5],
-    ["Administración de servicios en red", 7.5], ["Optativa A2", 7.5], ["Optativa B2", 7.5],
-  ]},
-  { sem: "8.º semestre", materias: [
-    ["Trabajo terminal II", 12], ["Liderazgo personal", 7.5], ["Gestión empresarial", 7.5],
-    ["Estancia profesional", 3], ["Desarrollo de habilidades sociales para la alta dirección", 3],
-  ]},
-];
+// Una sola carrera activa por usuario; su avance vive en su propia clave de
+// localStorage. Cambiar de carrera NO migra el avance (así lo pidió el usuario).
+const CARRERA_KEY = "escom_carrera";
+const CARRERAS_VALIDAS = ["ISC", "IA", "LCD"];
+
+function carreraActiva() {
+  try {
+    const c = localStorage.getItem(CARRERA_KEY);
+    if (CARRERAS_VALIDAS.includes(c)) return c;
+  } catch (e) { /* localStorage bloqueado: nos quedamos con el default */ }
+  return "ISC";
+}
+
+const CARRERA = carreraActiva();
+const PLAN_ACTIVO = PLANES[CARRERA];
+
+// ============================================================
+//  PLAN DE ESTUDIOS (derivado de planes.js según la carrera activa)
+// ============================================================
+// Forma heredada: [{ sem: "1.er semestre", materias: [[nombre, créditos], ...] }]
+// El ORDEN importa: los ids son s{semestre0}-{índice0} y el avance guardado en
+// localStorage se indexa por ellos. Ese orden lo manda nombres.csv, no la clave.
+const SEM_NOMBRE = ["1.er", "2.º", "3.er", "4.º", "5.º", "6.º", "7.º", "8.º"];
+const CR_OPTATIVA = (PLAN_ACTIVO.optativas[0] && PLAN_ACTIVO.optativas[0].cr) || 7.5;
+
+const PLAN = [];
+for (let s = 1; s <= 8; s++) {
+  const materias = PLAN_ACTIVO.materias.filter((m) => m.sem === s).map((m) => [m.nom, m.cr]);
+  PLAN_ACTIVO.slots
+    .filter((sl) => sl.sem === s)
+    .forEach((sl) => materias.push(["Optativa " + sl.label, CR_OPTATIVA]));
+  PLAN.push({ sem: SEM_NOMBRE[s - 1] + " semestre", materias });
+}
+
+// Dónde cayó cada slot de optativa. Se recalcula porque depende de cuántas
+// obligatorias trae el semestre, y eso cambia por carrera:
+// ISC sem 6 tiene 5 obligatorias -> A1/B1 son s5-5 y s5-6; IA tiene 4 -> s5-4 y s5-5.
+const OPT_SLOTS = {};
+PLAN.forEach((blk, s) => {
+  blk.materias.forEach((m, i) => {
+    const sl = PLAN_ACTIVO.slots.find((x) => x.sem === s + 1 && "Optativa " + x.label === m[0]);
+    if (sl) OPT_SLOTS["s" + s + "-" + i] = { label: sl.label, sem: sl.sem, defName: m[0] };
+  });
+});
+
+// Puente clave oficial <-> id de posición. La seriación de `planes.js` va por
+// clave (`C203`) y el estado del alumno por id (`s1-2`); esto los une.
+const ID_DE_CLAVE = {};
+const CLAVE_DE_ID = {};
+PLAN.forEach((blk, s) => {
+  blk.materias.forEach((m, i) => {
+    const mat = PLAN_ACTIVO.materias.find((x) => x.sem === s + 1 && x.nom === m[0]);
+    if (!mat) return; // los slots de optativa no tienen clave fija
+    const id = "s" + s + "-" + i;
+    ID_DE_CLAVE[mat.clave] = id;
+    CLAVE_DE_ID[id] = mat.clave;
+  });
+});
 
 // ============================================================
 //  DIFICULTAD POR MATERIA (promedio real de profes M+V, escala 0–6 → 1–10)
@@ -96,16 +117,10 @@ function difBadge(name) {
 // ============================================================
 const STATES = { pendiente: "Pendiente", aprobada: "Aprobada", reprobada: "Reprobada" };
 const ORDER = ["aprobada", "reprobada", "pendiente"];
-const TOTAL = 387;
-const MAX_CRED = 55;
-const KEY = "avanceISC_v2";
-
-const OPT_SLOTS = {
-  "s5-5": { label: "A1", sem: 6, defName: "Optativa A1" },
-  "s5-6": { label: "B1", sem: 6, defName: "Optativa B1" },
-  "s6-4": { label: "A2", sem: 7, defName: "Optativa A2" },
-  "s6-5": { label: "B2", sem: 7, defName: "Optativa B2" },
-};
+const TOTAL = PLAN_ACTIVO.creditos;       // ISC 387 · IA 351 · LCD 366
+const MAX_CRED = PLAN_ACTIVO.maxCred;     // 55 en las tres (tope institucional)
+// ISC conserva su clave original para no perder el avance ya capturado.
+const KEY = CARRERA === "ISC" ? "avanceISC_v2" : "avance_" + CARRERA + "_v1";
 
 // Bloques de horario (clases de 1:30, recesos 10:00–10:30 y 18:00–18:30)
 const TIME_BLOCKS = [

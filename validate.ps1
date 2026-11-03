@@ -35,13 +35,14 @@ function ToMin([string]$hhmm) { $p = $hhmm.Split(':'); return [int]$p[0] * 60 + 
 # ---------- parsear schedule.js ----------
 $schedText = Get-Content (Join-Path $root 'schedule.js') -Encoding UTF8 -Raw
 $ofertas = New-Object System.Collections.Generic.List[object]
-foreach ($m in [regex]::Matches($schedText, '\{\s*grupo:"([^"]*)",\s*materia:"([^"]*)",\s*profesor:"([^"]*)",\s*edificio:"([^"]*)",\s*salon:"([^"]*)",\s*sesiones:\[([^\]]*)\]')) {
+foreach ($m in [regex]::Matches($schedText, '\{\s*carrera:"([^"]*)",\s*grupo:"([^"]*)",\s*materia:"([^"]*)",\s*profesor:"([^"]*)",\s*edificio:"([^"]*)",\s*salon:"([^"]*)",\s*sesiones:\[([^\]]*)\]')) {
   $ses = New-Object System.Collections.Generic.List[object]
-  foreach ($s in [regex]::Matches($m.Groups[6].Value, '\{dia:"([^"]+)",ini:"([^"]+)",fin:"([^"]+)"\}')) {
+  foreach ($s in [regex]::Matches($m.Groups[7].Value, '\{dia:"([^"]+)",ini:"([^"]+)",fin:"([^"]+)"\}')) {
     $ses.Add([pscustomobject]@{ dia = $s.Groups[1].Value; ini = $s.Groups[2].Value; fin = $s.Groups[3].Value })
   }
   $ofertas.Add([pscustomobject]@{
-    grupo = $m.Groups[1].Value; materia = $m.Groups[2].Value; profesor = $m.Groups[3].Value; sesiones = $ses
+    carrera = $m.Groups[1].Value; grupo = $m.Groups[2].Value; materia = $m.Groups[3].Value
+    profesor = $m.Groups[4].Value; sesiones = $ses
   })
 }
 
@@ -92,9 +93,23 @@ if ($horasMal -eq 0) { Ok "Todas las horas con formato valido (ini < fin)" }
 Section "3) Profesores en schedule.js sin metrica en metrics.js"
 $placeholders = @('POR ASIGNAR', 'POR DEFINIR')
 $profsSched = $ofertas | ForEach-Object { $_.profesor } | Sort-Object -Unique
-$sinMetrica = @($profsSched | Where-Object { $_ -notin $placeholders -and -not $metrics.ContainsKey($_) })
+# schedule.js guarda los nombres normalizados (sin acentos); metrics.js no siempre.
+$metricsNorm = @{}; foreach ($k in $metrics.Keys) { $metricsNorm[(Norm $k)] = $true }
+$sinMetrica = @($profsSched | Where-Object { $_ -notin $placeholders -and -not $metricsNorm.ContainsKey((Norm $_)) })
+# Un profe puede dar en varias carreras: lo clasificamos por donde aparece.
+$carDe = @{}
+foreach ($o in $ofertas) {
+  if (-not $carDe.ContainsKey($o.profesor)) { $carDe[$o.profesor] = New-Object System.Collections.Generic.HashSet[string] }
+  [void]$carDe[$o.profesor].Add($o.carrera)
+}
 if ($sinMetrica.Count -eq 0) { Ok "Todos los profesores tienen metrica" }
-else { foreach ($p in $sinMetrica) { Warn "Sin metrica: $p" } }
+else {
+  $soloIsc = @($sinMetrica | Where-Object { $carDe[$_].Contains('ISC') })
+  $otros   = @($sinMetrica | Where-Object { -not $carDe[$_].Contains('ISC') })
+  Warn "$($sinMetrica.Count) de $($profsSched.Count) profesores sin metrica (detalle en PROFES-SIN-METRICA.md)"
+  if ($soloIsc.Count) { Write-Host "           ISC: $($soloIsc.Count)" -ForegroundColor DarkYellow }
+  if ($otros.Count)   { Write-Host "           solo IA/LCD: $($otros.Count) (el usuario los traera)" -ForegroundColor DarkYellow }
+}
 
 # ============================================================
 #  4. Maestros sin link de fuente
@@ -103,9 +118,25 @@ Section "4) Maestros sin link de fuente"
 $linksNorm = @{}; foreach ($k in $links.Keys) { $linksNorm[(Norm $k)] = $true }
 $sinLink = @($profsSched | Where-Object { $_ -notin $placeholders -and -not $linksNorm.ContainsKey((Norm $_)) })
 if ($sinLink.Count -eq 0) { Ok "Todos los maestros tienen link" }
-else {
-  Warn "$($sinLink.Count) maestro(s) sin link:"
-  foreach ($p in ($sinLink | Sort-Object)) { Write-Host "           - $p" -ForegroundColor DarkYellow }
+else { Warn "$($sinLink.Count) de $($profsSched.Count) maestros sin link (detalle en PROFES-SIN-METRICA.md)" }
+
+# ============================================================
+#  4b. Cobertura por carrera
+# ============================================================
+Section "4b) Ofertas y cobertura del plan por carrera"
+$planText = Get-Content (Join-Path $root 'planes.js') -Encoding UTF8 -Raw
+foreach ($car in @('ISC', 'IA', 'LCD')) {
+  $ofCar = @($ofertas | Where-Object { $_.carrera -eq $car })
+  $grupos = @($ofCar | ForEach-Object { $_.grupo } | Sort-Object -Unique)
+  $sems = (@($grupos | ForEach-Object { $_.Substring(0, 1) } | Sort-Object -Unique) -join '')
+  # materias obligatorias del plan de esa carrera
+  $blk = [regex]::Match($planText, "(?s)$car`: \{.*?materias: \[(.*?)\],").Groups[1].Value
+  $plan = @([regex]::Matches($blk, 'nom:"([^"]*)"') | ForEach-Object { Norm $_.Groups[1].Value })
+  $ofrecidas = @{}
+  foreach ($o in $ofCar) { $ofrecidas[(Norm $o.materia)] = $true }
+  $sinOferta = @($plan | Where-Object { -not $ofrecidas.ContainsKey($_) })
+  Ok "$car`: $($ofCar.Count) ofertas | $($grupos.Count) grupos | semestres $sems | $($plan.Count) materias del plan, $($sinOferta.Count) sin oferta este periodo"
+  foreach ($m in $sinOferta) { Write-Host "           sin oferta: $m" -ForegroundColor DarkGray }
 }
 
 # ============================================================

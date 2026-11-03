@@ -2,11 +2,17 @@
 //  PESTAÑA 2 · MAESTROS
 // ============================================================
 let profSort = { key: "name", dir: "asc" };
-let profTurno = "ambos"; // P16: ambos | M | V
+let profTurno = "ambos";   // P16: ambos | M | V
 const profsHead = document.getElementById("profsHead");
 const profsBody = document.getElementById("profsBody");
 const searchProf = document.getElementById("searchProf");
-document.getElementById("profCount").textContent = TEACHERS.length;
+
+// La lista de maestros NO se separa por carrera: las métricas son globales y un
+// profe da clase donde da. El selector de carrera manda sobre el plan y las
+// ofertas del horario, pero aquí se ven todos, con badge de en qué carrera dan.
+function teachersActuales() {
+  return TEACHERS;
+}
 
 const PROF_COLS = [
   { key: "name", label: "Maestro", type: "text" },
@@ -25,7 +31,7 @@ function renderProfs() {
   renderProfsHead();
   const q = searchProf.value.trim().toLowerCase();
 
-  let rows = TEACHERS.map((t) => {
+  let rows = teachersActuales().map((t) => {
     const m = getMetric(t.name);
     return {
       ...t,
@@ -72,7 +78,7 @@ function renderProfs() {
   profsBody.innerHTML = rows.map((r) => `
     <tr>
       <td>
-        <div class="pname"><a href="#" class="prof-link" data-prof="${esc(r.name)}">${esc(r.name)}</a>${turnoBadges(r.grupos)}</div>
+        <div class="pname"><a href="#" class="prof-link" data-prof="${esc(r.name)}">${esc(r.name)}</a>${turnoBadges(r.grupos)}${carreraBadges(r.name)}</div>
         ${matsCellHTML(r.name)}
       </td>
       <td>${metricCell(r.calidad, "cal")}</td>
@@ -159,8 +165,12 @@ const profsPaneHead = document.querySelector("#pane-maestros .pane-head");
 let currentProfDetail = null; // maestro cuyo detalle está abierto (para repintar al cargar el CSV)
 
 function ofertasDeMaestro(name) {
+  // Siempre las tres carreras: un maestro da donde da, y su horario real es el
+  // conjunto. Cruce por norm() porque schedule.js guarda los nombres sin acentos
+  // y aquí llegan con ellos (HURTADO AVILÉS vs HURTADO AVILES).
   const sched = typeof SCHEDULE !== "undefined" ? SCHEDULE : [];
-  return sched.filter((e) => e.profesor === name);
+  const nn = norm(name);
+  return sched.filter((e) => norm(e.profesor) === nn);
 }
 
 // Rejilla semanal del maestro: misma estructura que la del alumno,
@@ -385,4 +395,5 @@ document.getElementById("turnoFilter").addEventListener("click", (e) => {
     b.classList.toggle("active", b === btn));
   renderProfs();
 });
+
 

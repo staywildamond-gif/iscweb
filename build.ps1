@@ -80,48 +80,12 @@ function Write-Utf8Bom([string]$path, [string]$content) {
 $DIAS = @('Lun', 'Mar', 'Mie', 'Jue', 'Vie')
 
 # ============================================================
-#  1) schedule.js
+#  1) schedule.js  ->  SE MUDO A build-data.ps1
 # ============================================================
-function Build-Schedule {
-  $out = New-Object System.Collections.Generic.List[string]
-
-  foreach ($src in @(
-      (Join-Path $root 'horarios.csv'),
-      (Join-Path $root 'IMG/VESP/horario_completo1.csv'))) {
-    $csv = Read-Csv $src
-    $h = $csv.header
-    $iG = Col $h 'Grupo'; $iA = Col $h 'Asignatura'; $iP = Col $h 'Profesor'
-    $iE = Col $h 'Edificio'; $iS = Col $h 'Salon'
-    $diaIdx = @{}; foreach ($d in $DIAS) { $diaIdx[$d] = (Col $h $d) }
-
-    foreach ($r in $csv.rows) {
-      $grupo = $r[$iG].Trim()
-      if ($grupo -eq '') { continue }
-      $sesiones = New-Object System.Collections.Generic.List[string]
-      foreach ($d in $DIAS) {
-        $ci2 = $diaIdx[$d]
-        if ($ci2 -lt 0 -or $ci2 -ge $r.Count) { continue }
-        $cell = $r[$ci2].Trim()
-        if ($cell -eq '') { continue }
-        $m = [regex]::Match($cell, '^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$')
-        if (-not $m.Success) { continue }
-        $sesiones.Add(('{{dia:"{0}",ini:"{1}",fin:"{2}"}}' -f $d, $m.Groups[1].Value, $m.Groups[2].Value))
-      }
-      $line = '  {{ grupo:"{0}", materia:"{1}", profesor:"{2}", edificio:"{3}", salon:"{4}", sesiones:[{5}] }},' -f `
-        (Js-Str $grupo), (Js-Str $r[$iA]), (Js-Str $r[$iP]), (Js-Str $r[$iE]), (Js-Str $r[$iS]), ($sesiones -join ',')
-      $out.Add($line)
-    }
-  }
-
-  $body = @()
-  $body += '// ========== HORARIOS REALES (generado desde horarios.csv + IMG/VESP/horario_completo1.csv) =========='
-  $body += '// Matutino (XCM) + Vespertino (XCV). Sin choques intra-grupo.'
-  $body += 'const SCHEDULE = ['
-  $body += $out
-  $body += '];'
-  Write-Utf8Bom (Join-Path $root 'schedule.js') (($body -join "`r`n") + "`r`n")
-  return $out.Count
-}
+# schedule.js ya NO se genera aqui. Ahora sale del HTML oficial de data/*/horario-*.html
+# para las tres carreras (ISC + IA + LCD) y lleva campo `carrera`. Corre build-data.ps1.
+# horarios.csv y IMG/VESP/horario_completo1.csv quedan como respaldo historico del
+# periodo 27/1 de ISC; ya no alimentan nada.
 
 # ============================================================
 #  2) metrics.js
@@ -257,13 +221,13 @@ function Build-Cupos {
 }
 
 # ---------- run ----------
-$nSched  = Build-Schedule
 $nMetric = Build-Metrics
 $nManual = Build-Manual
 $nCupos  = Build-Cupos
 
-Write-Host "schedule.js        -> $nSched ofertas"
 Write-Host "metrics.js         -> $nMetric maestros"
 Write-Host "maestros_manual.js -> $nManual links"
 Write-Host "cupos.js           -> $nCupos grupos-materia"
+Write-Host ""
+Write-Host "schedule.js y planes.js salen de build-data.ps1 (HTML oficial de data/)."
 Write-Host "Listo. Corre validate.ps1 para auditar."
