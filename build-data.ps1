@@ -254,6 +254,69 @@ foreach($cod in $CARRERAS.Keys){
 [IO.File]::WriteAllText((Join-Path $ROOT "schedule.js"), $s.ToString(), $utf8bom)
 
 # ============================================================
+#  calendario.js
+# ============================================================
+# Desde calendario.csv, que se transcribio a mano del PDF del IPN: ahi las
+# fechas son colores sobre la rejilla y no hay forma de parsearlas.
+$nEventos = 0; $nPeriodos = 0
+$csvCal = Join-Path $ROOT "calendario.csv"
+if(Test-Path $csvCal){
+  $ev = New-Object System.Collections.ArrayList
+  foreach($ln in (Get-Content -Encoding UTF8 $csvCal)){
+    if(-not $ln -or $ln.StartsWith('#') -or $ln.StartsWith('inicio,')){ continue }
+    $c = $ln -split ','
+    if($c.Count -lt 3 -or -not ($c[0] -match '^\d{4}-\d{2}-\d{2}$')){ continue }
+    [void]$ev.Add([pscustomobject]@{
+      ini = $c[0].Trim()
+      fin = if($c[1].Trim()){ $c[1].Trim() } else { $c[0].Trim() }
+      tipo = $c[2].Trim()
+      periodo = if($c.Count -ge 4){ $c[3].Trim() } else { '' }
+    })
+  }
+  $ev = @($ev | Sort-Object ini, tipo)
+  $nEventos = $ev.Count
+
+  # Un periodo escolar se arma de sus marcas: reinscripcion, inicio y fin.
+  $ids = @($ev | Where-Object { $_.periodo } | ForEach-Object { $_.periodo } | Sort-Object -Unique)
+  $per = New-Object System.Collections.ArrayList
+  foreach($id in $ids){
+    $deEste = @($ev | Where-Object { $_.periodo -eq $id })
+    $ini  = @($deEste | Where-Object { $_.tipo -eq 'inicio' })        | Select-Object -First 1
+    $fin  = @($deEste | Where-Object { $_.tipo -eq 'fin' })           | Select-Object -First 1
+    $rei  = @($deEste | Where-Object { $_.tipo -eq 'reinscripcion' }) | Select-Object -First 1
+    if(-not $ini){ [void]$avisos.Add("periodo $id sin fecha de inicio en calendario.csv"); continue }
+    [void]$per.Add([pscustomobject]@{
+      id = $id; inicio = $ini.ini
+      fin = if($fin){ $fin.ini } else { '' }
+      reinsIni = if($rei){ $rei.ini } else { '' }
+      reinsFin = if($rei){ $rei.fin } else { '' }
+    })
+  }
+  $per = @($per | Sort-Object inicio)
+  $nPeriodos = $per.Count
+
+  $k = New-Object Text.StringBuilder
+  [void]$k.AppendLine("// ========== CALENDARIO ACADEMICO (generado por build-data.ps1 desde calendario.csv) ==========")
+  [void]$k.AppendLine("// NO editar a mano. Corrige calendario.csv y vuelve a correr build-data.ps1.")
+  [void]$k.AppendLine("// Fuente: data/calendarioipn-escolarizada.pdf (IPN 2026-2027, modalidad escolarizada).")
+  [void]$k.AppendLine("const CALENDARIO = {")
+  [void]$k.AppendLine("  periodos: [")
+  foreach($p2 in $per){
+    [void]$k.AppendLine("    { id:`"$($p2.id)`", inicio:`"$($p2.inicio)`", fin:`"$($p2.fin)`", reinsIni:`"$($p2.reinsIni)`", reinsFin:`"$($p2.reinsFin)`" },")
+  }
+  [void]$k.AppendLine("  ],")
+  [void]$k.AppendLine("  eventos: [")
+  foreach($e in $ev){
+    [void]$k.AppendLine("    { ini:`"$($e.ini)`", fin:`"$($e.fin)`", tipo:`"$($e.tipo)`", periodo:`"$($e.periodo)`" },")
+  }
+  [void]$k.AppendLine("  ],")
+  [void]$k.AppendLine("};")
+  [IO.File]::WriteAllText((Join-Path $ROOT "calendario.js"), $k.ToString(), $utf8bom)
+} else {
+  [void]$avisos.Add("no existe calendario.csv: no se genero calendario.js")
+}
+
+# ============================================================
 #  resumen
 # ============================================================
 ""
@@ -265,6 +328,9 @@ foreach($r in $resumen){ "{0,-5}{1,8}{2,10}{3,10}{4,10}" -f $r.car,$r.obl,$r.crO
 $tot = 0
 foreach($k in $porCarrera.Keys){ "{0,-5}{1,6} ofertas" -f $k,$porCarrera[$k]; $tot += $porCarrera[$k] }
 "TOTAL $tot ofertas"
+""
+"=== calendario.js ==="
+"$nPeriodos periodos, $nEventos eventos"
 ""
 if($avisos.Count){
   "=== avisos ($($avisos.Count)) ==="

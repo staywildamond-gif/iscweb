@@ -3,29 +3,112 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mi avance — Ingeniería en Sistemas Computacionales</title>
+  <title>Avance ESCOM — plan, maestros y horario de ISC, IA y Ciencia de Datos</title>
+  <meta name="description" content="Lleva tu avance del plan de estudios de ESCOM-IPN, consulta las calificaciones de 276 maestros y arma tu horario de reinscripción sin choques. Sistemas Computacionales, Inteligencia Artificial y Ciencia de Datos.">
+  <meta name="theme-color" content="#f3f4fb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#11131f" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Avance ESCOM — plan, maestros y horario">
+  <meta property="og:description" content="Tu avance del plan, las calificaciones de los maestros y tu horario de reinscripción sin choques. ISC, IA y Ciencia de Datos.">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <script>
+    // Tema antes del primer pintado: si esto esperara a tema.js, la página
+    // parpadearía en claro antes de ponerse oscura.
+    (function () {
+      try {
+        var t = localStorage.getItem("escom_tema");
+        if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "oscuro" : "claro";
+        document.documentElement.dataset.tema = t;
+      } catch (e) { document.documentElement.dataset.tema = "claro"; }
+    })();
+  </script>
 </head>
 <body>
-  <div class="wrap">
+
+  <!-- ===== PORTADA (la primera vez, y cuando pulsas "Inicio") ===== -->
+  <section class="portada" id="portada" hidden>
+    <div class="pt-wrap">
+      <header class="pt-hero">
+        <div class="eyebrow">ESCOM · Instituto Politécnico Nacional</div>
+        <h1 class="pt-h1">Tu carrera completa,<br>en una sola página.</h1>
+        <p class="pt-lead">
+          El plan de estudios, quién da cada materia y qué tal califica, cuántos lugares
+          quedan en cada grupo y un horario que se arma solo sin choques. Todo vive en tu
+          navegador: no hay cuenta, no hay servidor, no se sube nada.
+        </p>
+        <div class="pt-stats" id="ptStats"></div>
+      </header>
+
+      <h2 class="pt-h2">Elige tu carrera</h2>
+      <div class="pt-carreras" id="ptCarreras"></div>
+
+      <h2 class="pt-h2">Qué puedes hacer</h2>
+      <div class="pt-feats">
+        <article class="pt-feat">
+          <span class="pt-ico" aria-hidden="true">📊</span>
+          <h3>Llevar tu avance</h3>
+          <p>Captura tu calificación y la app deduce el estado: aprobada, reprobada,
+             en recurse o bloqueada sin tercer intento. Los créditos se cuentan solos.</p>
+        </article>
+        <article class="pt-feat">
+          <span class="pt-ico" aria-hidden="true">⭐</span>
+          <h3>Ver cómo califica cada maestro</h3>
+          <p>Calidad, cuántos lo recomiendan y qué tan pesado es, con su horario completo
+             y el enlace a la fuente. Compara lado a lado a los de una misma materia.</p>
+        </article>
+        <article class="pt-feat">
+          <span class="pt-ico" aria-hidden="true">🗓️</span>
+          <h3>Armar tu horario</h3>
+          <p>Arrastra materias a la rejilla o deja que el modo automático te lo cuadre
+             dentro de tu horario, sin huecos y respetando el tope de 55 créditos.</p>
+        </article>
+        <article class="pt-feat">
+          <span class="pt-ico" aria-hidden="true">🎯</span>
+          <h3>Planear tus optativas</h3>
+          <p>Las 14 especializaciones de ISC como rutas de 6.º a 7.º semestre, y el
+             catálogo completo en IA y Ciencia de Datos.</p>
+        </article>
+      </div>
+
+      <div class="pt-cta">
+        <button class="btn-primary pt-entrar" id="ptEntrar">Entrar</button>
+        <span class="pt-cta-hint">Pulsa <kbd>/</kbd> en cualquier momento para buscar una materia o un maestro.</span>
+      </div>
+
+      <p class="pt-pie" id="ptPie"></p>
+    </div>
+  </section>
+
+  <div class="wrap" id="app">
 
     <header class="hero">
       <div class="herotop">
         <div class="eyebrow">Avance académico · <span id="carreraEyebrow">ISC</span></div>
-        <label class="carrerapick">
-          <span>Carrera</span>
-          <select id="carreraSel" aria-label="Carrera">
-            <option value="ISC">ISC · Sistemas Computacionales</option>
-            <option value="IA">IA · Inteligencia Artificial</option>
-            <option value="LCD">LCD · Ciencia de Datos</option>
-          </select>
-        </label>
+        <div class="heroacc">
+          <button class="iconbtn" id="buscarBtn" title="Buscar (/)" aria-label="Buscar">🔍</button>
+          <button class="iconbtn" id="temaBtn" title="Cambiar tema" aria-label="Cambiar tema"></button>
+          <button class="iconbtn" id="inicioBtn" title="Ir a la portada" aria-label="Ir a la portada">🏠</button>
+          <label class="carrerapick">
+            <span>Carrera</span>
+            <select id="carreraSel" aria-label="Carrera">
+              <option value="ISC">ISC · Sistemas Computacionales</option>
+              <option value="IA">IA · Inteligencia Artificial</option>
+              <option value="LCD">LCD · Ciencia de Datos</option>
+            </select>
+          </label>
+        </div>
       </div>
       <h1>Mi mapa de la carrera</h1>
     </header>
+
+    <div class="calfranja" id="calFranja" hidden></div>
 
     <!-- ===== NAVEGACIÓN POR PESTAÑAS ===== -->
     <nav class="tabs" id="tabs">
@@ -34,6 +117,7 @@
       <button class="tab" data-tab="horario">Generar horario</button>
       <button class="tab" data-tab="optativas">Optativas</button>
       <button class="tab" data-tab="historial">Historial</button>
+      <button class="tab" data-tab="calendario">Calendario</button>
     </nav>
 
     <!-- ===== PESTAÑA: AVANCE ===== -->
@@ -80,7 +164,7 @@
     <section class="tabpane" id="pane-maestros">
       <div class="pane-head">
         <h2 class="pane-title">Maestros</h2>
-        <p class="pane-sub"><b id="profCount">0</b> maestros en total. Métricas tomadas del registro oficial (solo lectura).</p>
+        <p class="pane-sub"><b id="profCount">0</b> <span id="profCountTxt">maestros en total</span>. Métricas tomadas del registro oficial (solo lectura).</p>
         <div class="profs-toolbar">
           <input class="search" id="searchProf" type="text" placeholder="Buscar maestro o materia…" aria-label="Buscar maestro">
           <div class="turno-filter" id="turnoFilter" role="group" aria-label="Filtrar por turno">
@@ -88,6 +172,13 @@
             <button class="turno-btn" data-turno="M">☀️ Matutino</button>
             <button class="turno-btn" data-turno="V">🌙 Vespertino</button>
           </div>
+          <label class="sort-wrap">Materias:
+            <select id="matsProf" aria-label="Qué materias mostrar">
+              <option value="todas">Todas</option>
+              <option value="imparte">Solo las que imparte</option>
+              <option value="yano">Solo las que ya no</option>
+            </select>
+          </label>
           <label class="sort-wrap">Ordenar por:
             <select id="sortProf">
               <optgroup label="Maestro">
@@ -106,6 +197,11 @@
                 <option value="dificultad|asc">Dificultad — Menor a mayor</option>
                 <option value="dificultad|desc">Dificultad — Mayor a menor</option>
               </optgroup>
+              <optgroup label="Materias que imparte">
+                <option value="imparte|desc">Imparte más materias</option>
+                <option value="imparte|asc">Imparte menos materias</option>
+                <option value="yano|desc">Más materias que ya no da</option>
+              </optgroup>
               <optgroup label="Otros criterios">
                 <option value="grupo|asc">Grupo A→Z</option>
                 <option value="semestre|asc">Semestre 1→8</option>
@@ -115,6 +211,12 @@
             </select>
           </label>
         </div>
+        <p class="mats-leyenda">
+          <span class="mtag on">Imparte</span>
+          <span class="mtag off">Ya no</span>
+          Es tu propia nota: pulsa una materia para cambiarla. Arranca con lo que dice el
+          registro oficial y se guarda solo en este navegador.
+        </p>
       </div>
       <div class="table-wrap" id="profsListWrap">
         <table class="profs-table" id="profsTable">
@@ -131,6 +233,8 @@
         <h2 class="pane-title">Generar horario</h2>
         <p class="pane-sub">Agrega maestros desde tus materias pendientes o reprobadas en la pestaña <b>Mi avance</b>. Aquí se contabilizan los créditos inscritos (máx. <b>55</b>).</p>
       </div>
+
+      <div id="horarioAviso"></div>
 
       <div class="cred-summary" id="credSummary"></div>
 
@@ -169,6 +273,7 @@
       <div class="horario-actions">
         <button id="exportJpgBtn" class="btn">📷 Exportar JPG</button>
         <button id="exportXlsxBtn" class="btn">📊 Exportar XLSX</button>
+        <button id="compartirBtn" class="btn">🔗 Compartir enlace</button>
         <button id="clearHorarioBtn" class="btn-danger">🗑 Borrar todo el horario</button>
       </div>
 
@@ -184,12 +289,23 @@
       <div id="rutasOpt"></div>
     </section>
 
+    <!-- ========== PESTAÑA 6 · CALENDARIO ACADÉMICO ========== -->
+    <section class="tabpane" id="pane-calendario">
+      <div class="pane-head">
+        <h2 class="pane-title">Calendario académico</h2>
+        <p class="pane-sub" id="calSub"></p>
+      </div>
+      <div id="calPeriodos" class="cal-periodos"></div>
+      <div id="calMeses" class="cal-meses"></div>
+      <div id="calLeyenda" class="cal-leyenda"></div>
+    </section>
+
     <!-- ========== PESTAÑA 5 · HISTORIAL DE HORARIOS ========== -->
     <section class="tabpane" id="pane-historial">
       <div class="pane-head">
         <h2 class="pane-title">Historial de horarios</h2>
         <p class="pane-sub">Horarios oficiales de periodos pasados, por grupo. Solo lectura.</p>
-        <div class="hist-toolbar">
+        <div class="hist-toolbar" id="histToolbar">
           <label>Periodo
             <select id="histPeriodo"></select>
           </label>
@@ -203,16 +319,62 @@
 
   </div>
 
-  <!-- Datos (literales) -->
+  <!-- ===== BUSCADOR GLOBAL (tecla / o Ctrl+K) ===== -->
+  <div class="pal" id="pal" hidden>
+    <div class="pal-box" role="dialog" aria-modal="true" aria-label="Buscar">
+      <input class="pal-input" id="palInput" type="text" autocomplete="off" spellcheck="false"
+             placeholder="Busca una materia, un maestro o un grupo…" aria-label="Buscar">
+      <div class="pal-res" id="palRes"></div>
+      <div class="pal-pie">
+        <span><kbd>↑</kbd><kbd>↓</kbd> moverte</span>
+        <span><kbd>⏎</kbd> abrir</span>
+        <span><kbd>Esc</kbd> cerrar</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== COMPARADOR DE MAESTROS ===== -->
+  <div class="modal" id="cmp" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="cmpTit">
+      <header class="modal-head">
+        <h2 id="cmpTit">Comparar maestros</h2>
+        <button class="iconbtn" id="cmpCerrar" aria-label="Cerrar">✕</button>
+      </header>
+      <div class="modal-body" id="cmpBody"></div>
+    </div>
+  </div>
+
+  <!-- ===== ATAJOS DE TECLADO (tecla ?) ===== -->
+  <div class="modal" id="ayuda" hidden>
+    <div class="modal-box modal-sm" role="dialog" aria-modal="true" aria-labelledby="ayudaTit">
+      <header class="modal-head">
+        <h2 id="ayudaTit">Atajos de teclado</h2>
+        <button class="iconbtn" id="ayudaCerrar" aria-label="Cerrar">✕</button>
+      </header>
+      <div class="modal-body">
+        <dl class="atajos">
+          <dt><kbd>/</kbd> <span>o</span> <kbd>Ctrl</kbd>+<kbd>K</kbd></dt><dd>Buscar materia, maestro o grupo</dd>
+          <dt><kbd>1</kbd>…<kbd>6</kbd></dt><dd>Saltar a cada pestaña</dd>
+          <dt><kbd>T</kbd></dt><dd>Claro / oscuro</dd>
+          <dt><kbd>H</kbd></dt><dd>Volver a la portada</dd>
+          <dt><kbd>?</kbd></dt><dd>Esta ayuda</dd>
+          <dt><kbd>Esc</kbd></dt><dd>Cerrar lo que esté abierto</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- Datos (literales). Solo los que hacen falta para el primer pintado;
+       cupos.js y maestros_manual.js entran por prefetch e historial.js a
+       demanda, los tres desde lazy.js. -->
   <script src="roster.js"></script>
   <script src="metrics.js"></script>
   <script src="schedule.js"></script>
+  <script src="calendario.js"></script>
   <script src="planes.js"></script>
   <script src="optativas.js"></script>
-  <script src="maestros_manual.js"></script>
-  <script src="cupos.js"></script>
-  <script src="historial.js"></script>
   <!-- App (antes app.js, ahora modularizado; el orden reproduce el archivo original) -->
+  <script src="lazy.js"></script>
   <script src="data.js"></script>
   <script src="core.js"></script>
   <script src="avance.js"></script>
@@ -222,7 +384,14 @@
   <script src="auto.js"></script>
   <script src="export.js"></script>
   <script src="historial-ui.js"></script>
+  <script src="calendario-ui.js"></script>
   <script src="carrera-ui.js"></script>
+  <script src="tema.js"></script>
+  <script src="buscador.js"></script>
+  <script src="comparador.js"></script>
+  <script src="compartir.js"></script>
+  <script src="atajos.js"></script>
+  <script src="portada.js"></script>
   <script src="init.js"></script>
 </body>
 </html>

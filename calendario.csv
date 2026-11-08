@@ -1,0 +1,71 @@
+# Calendario academico IPN 2026-2027, modalidad escolarizada.
+# Transcrito a mano de data/calendarioipn-escolarizada.pdf el 2026-11-02: en el PDF
+# las fechas son COLORES sobre la rejilla, no texto, asi que no hay forma de parsearlo.
+# Si el IPN publica el calendario siguiente, se reemplaza el PDF y se agregan filas aqui.
+#
+# fin vacio = un solo dia. periodo vacio = no pertenece a un periodo escolar.
+# tipo:
+#   reinscripcion    inscripcion y reinscripcion (verde)
+#   inicio / fin     inicio y fin del periodo escolar (triangulos verde y rojo)
+#   ordinaria        registro de evaluacion ordinaria (morado)
+#   extraordinaria   registro de evaluacion extraordinaria (amarillo)
+#   inscripcion_ets  inscripcion a evaluacion a titulo de suficiencia (azul marino)
+#   ets              evaluacion a titulo de suficiencia (azul claro)
+#   vacaciones       vacaciones (gris)
+#   descanso         dia de descanso obligatorio (rayado)
+#   sindical         dia de descanso por acuerdo sindical (circulo azul)
+#   politecnico      celebracion del Dia del Politecnico
+#   limite_saberes   fecha limite para registro de evaluacion por saberes previamente adquiridos
+#   planeacion       actividades de planeacion didactica, academica y directiva (sin clases)
+#
+# No se transcribieron las marcas que no aplican a licenciatura: induccion NMS/NS
+# y las fechas limite de posgrado.
+inicio,fin,tipo,periodo
+2026-08-01,2026-08-07,vacaciones,
+2026-08-10,2026-08-14,planeacion,
+2026-08-17,2026-08-21,reinscripcion,27/1
+2026-08-24,,inicio,27/1
+2026-09-16,,descanso,
+2026-09-18,,limite_saberes,27/1
+2026-09-28,2026-09-30,ordinaria,27/1
+2026-11-01,2026-11-02,sindical,
+2026-11-05,2026-11-06,ordinaria,27/1
+2026-11-09,,ordinaria,27/1
+2026-11-16,,descanso,
+2026-12-11,,ordinaria,27/1
+2026-12-14,2026-12-15,ordinaria,27/1
+2026-12-16,2026-12-18,extraordinaria,27/1
+2026-12-18,,fin,27/1
+2026-12-21,2027-01-01,vacaciones,
+2026-12-25,,descanso,
+2027-01-01,,descanso,
+2027-01-04,2027-01-08,planeacion,
+2027-01-06,2027-01-07,inscripcion_ets,27/2
+2027-01-11,2027-01-15,ets,27/2
+2027-01-18,2027-01-22,reinscripcion,27/2
+2027-01-25,,inicio,27/2
+2027-02-01,,descanso,
+2027-02-19,,limite_saberes,27/2
+2027-03-04,2027-03-05,ordinaria,27/2
+2027-03-08,,ordinaria,27/2
+2027-03-15,,descanso,
+2027-03-22,2027-04-02,vacaciones,
+2027-04-30,,ordinaria,27/2
+2027-05-01,,descanso,
+2027-05-03,2027-05-04,ordinaria,27/2
+2027-05-05,,descanso,
+2027-05-10,,sindical,
+2027-05-15,,sindical,
+2027-05-21,,politecnico,
+2027-06-15,2027-06-17,ordinaria,27/2
+2027-06-18,,extraordinaria,27/2
+2027-06-21,2027-06-22,extraordinaria,27/2
+2027-06-22,,fin,27/2
+2027-06-24,,inscripcion_ets,28/1
+2027-06-28,2027-07-02,planeacion,
+2027-07-05,2027-07-09,ets,28/1
+2027-07-12,2027-07-16,planeacion,
+2027-07-19,2027-08-01,vacaciones,
+2027-07-21,,descanso,
+2027-08-09,2027-08-13,reinscripcion,28/1
+2027-08-16,,inicio,28/1

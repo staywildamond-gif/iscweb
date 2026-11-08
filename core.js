@@ -62,21 +62,28 @@ function esc(s) {
 }
 
 // ---- Cupos (ocupabilidad) — índice grupo+materia → {cupo, ins, disp} ----
+// cupos.js llega diferido (ver lazy.js), así que los índices arrancan vacíos y
+// se llenan cuando el archivo aterriza. Mientras tanto cupoDe() devuelve null y
+// las etiquetas de cupo simplemente no se pintan.
 const cuposIndex = {};
-if (typeof CUPOS !== "undefined" && Array.isArray(CUPOS)) {
-  CUPOS.forEach((c) => { cuposIndex[c.g + "|" + norm(c.m)] = c; });
+const cuposHistIndex = {};   // por periodo (CUPOS_HIST del cupos.js)
+
+function indexarCupos() {
+  if (typeof CUPOS !== "undefined" && Array.isArray(CUPOS)) {
+    CUPOS.forEach((c) => { cuposIndex[c.g + "|" + norm(c.m)] = c; });
+  }
+  if (typeof CUPOS_HIST !== "undefined" && CUPOS_HIST) {
+    Object.keys(CUPOS_HIST).forEach((p) => {
+      cuposHistIndex[p] = {};
+      (CUPOS_HIST[p] || []).forEach((c) => { cuposHistIndex[p][c.g + "|" + norm(c.m)] = c; });
+    });
+  }
 }
+indexarCupos();   // por si cupos.js se cargó antes (file:// o cache)
+
 function cupoDe(grupo, materia) {
   if (!grupo || !materia) return null;
   return cuposIndex[grupo + "|" + norm(materia)] || null;
-}
-// Índice histórico de cupos por periodo (CUPOS_HIST del cupos.js)
-const cuposHistIndex = {};
-if (typeof CUPOS_HIST !== "undefined" && CUPOS_HIST) {
-  Object.keys(CUPOS_HIST).forEach((p) => {
-    cuposHistIndex[p] = {};
-    (CUPOS_HIST[p] || []).forEach((c) => { cuposHistIndex[p][c.g + "|" + norm(c.m)] = c; });
-  });
 }
 function cupoHistDe(grupo, materia, periodo) {
   const idx = cuposHistIndex[periodo];
@@ -199,9 +206,7 @@ function registerManual(name, obj) {
 }
 
 function refreshAfterManual() {
-  if (document.querySelector("#pane-maestros.active")) renderProfs();
-  if (document.querySelector("#pane-plan.active") && typeof render === "function") render();
-  if (currentProfDetail && profDetailEl && !profDetailEl.hidden) showProfDetail(currentProfDetail);
+  repintarActiva();   // lazy.js — cubre las 6 pestañas y la ficha del maestro
 }
 
 function loadManualMetrics() {
@@ -391,6 +396,21 @@ const ALL_MATERIAS = (() => {
 function turnoDeGrupo(g) {
   const m = String(g).trim().match(/^[1-8][A-Z]([MV])/);
   return m ? m[1] : null;
+}
+
+// Carrera codificada en la 2.ª letra del grupo: C=ISC, B=IA, A=LCD.
+// Es un RESPALDO, no la fuente: las ofertas traen campo `carrera` explícito
+// (CLAUDE.md §9) y hay que usar ese. Esto solo sirve para datos viejos que
+// todavía no lo tengan.
+const LETRA_CARRERA = { C: "ISC", B: "IA", A: "LCD" };
+function carreraDeGrupo(g) {
+  const m = String(g).trim().match(/^[1-8]([A-Z])[MV]/);
+  return m ? (LETRA_CARRERA[m[1]] || null) : null;
+}
+
+// La carrera de una oferta: el campo si lo trae, y si no, deducida del grupo
+function carreraDeOferta(o) {
+  return o.carrera || carreraDeGrupo(o.grupo);
 }
 function turnosDeGrupos(grupos) {
   const set = new Set();

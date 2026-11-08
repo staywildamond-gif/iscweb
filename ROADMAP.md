@@ -71,6 +71,7 @@ Herramientas: `build.ps1`, `validate.ps1`.
 - [x] `Nueva carpeta/` → renombrada a `auditoria/` (tiene los PNG de SAES, los scripts y los CSV intermedios; `tools/` habría mentido sobre el contenido).
 - [ ] Borrar rama remota ya integrada `feat/dificultad-seriacion-inscrita` — **pendiente: requiere permiso del usuario** (`git push origin --delete`).
 - [x] `CLAUDE.md`: quitado `app.js`, documentados los módulos y el orden de carga, corregidas las letras de carrera, agregada la sección `data/` y §9 con las decisiones multi-carrera.
+- [x] **Borrado lo muerto (2026-11-02): el árbol pasó de 22 MB a 3.8 MB**, 214 archivos menos. Se fueron `auditoria/` menos `pdf2png.sh` (5.1 MB de evidencia de una auditoría terminada y dos scripts de Python, que ni siquiera está instalado), `data/_descartados/` (100 KB), los tres `data/*/mapa.png` (1.1 MB, se regeneran del PDF), `horarios.csv` + `IMG/VESP/horario_completo1.csv` —que dejaron de alimentar nada cuando `schedule.js` pasó a salir del HTML— e `IMG/` completa (12 MB de capturas de SAES y scripts de Python de la transcripción original de ISC). **Todo sigue en el historial de git**; `git show <commit>:IMG/MAT/1ER.jpg > x.jpg` lo recupera. Ahora la única fuente es el HTML oficial de `data/`.
 
 ### Fase 1 — Datos de IA y LCD
 - [x] Mover las fuentes oficiales al repo: `data/isc/`, `data/ia/`, `data/lcd/`, `data/_descartados/`.
@@ -101,8 +102,88 @@ Herramientas: `build.ps1`, `validate.ps1`.
 - [x] Modo Auto revisado en las tres carreras. La cascada y la ventana de turno ya eran genéricas; lo que estaba mal era la seriación: `auto.js` tenía su propia copia de la de ISC, por nombre, así que en IA y LCD aplicaba reglas de ISC donde el nombre coincidía e ignoraba las suyas. Ahora lee `PLAN_ACTIVO.seriacion` por clave. Probado en blanco: ISC 6 materias/51 cr, IA 6/51, LCD 7/54, todas con grupos de su carrera y bajo el tope de 55.
 - [ ] `SUBJECT_DIFFICULTY` es de ISC y se reusa por nombre normalizado: en IA/LCD aparece en las materias que comparten nombre y queda vacía en el resto.
 
-### Fase 4 — Práctica 2 de BD (aparte de la app)
-- [ ] Modelo EER con las entidades del tracker (Carrera, Materia, Grupo, Oferta, Maestro, Métrica, Cupo, Periodo, Alumno/Avance).
+### Fase 3.5 — Calendario académico
+- [x] `calendario.csv` transcrito a mano del PDF del IPN (las fechas son colores, no texto) → `calendario.js` vía `build-data.ps1`. 3 periodos, 48 eventos.
+- [x] Franja arriba: periodo, semana N de M, aviso si hoy no hay clase y cuenta regresiva al próximo hito.
+- [x] Días inhábiles marcados en la cabecera de la rejilla del horario, con la fecha de cada día de la semana en curso.
+- [x] Pestaña **Calendario**: tarjetas de los 3 periodos (la vigente resaltada, con su semana) y la rejilla de 13 meses con los días pintados por tipo de evento, igual que el PDF, más la leyenda.
+- [ ] Que `historial.js` derive el periodo vigente del calendario en vez de tenerlo a mano.
+- [ ] Marcar las semanas de evaluación (ordinaria, extraordinaria, ETS) en la franja.
+
+### Fase 3.6 — Carga diferida
+- [x] `lazy.js`: `cargarDato()` (promesa, un `<script>` por archivo), `prefetchDatos()` y `repintarActiva()`.
+- [x] `cupos.js` + `maestros_manual.js` salen de `index.html` y entran por prefetch en cuanto el navegador queda libre; `indexarCupos()` y `loadManualMetrics()` corren al aterrizar y repintan.
+- [x] `historial.js` (187 KB) se pide a demanda: al abrir la pestaña Historial o la ficha de un maestro, con placeholder mientras llega.
+- [x] **Arranque: 639 KB → 366 KB (−42 %).** Verificado en las tres carreras, las 6 pestañas y la ficha de maestro, 0 errores de consola.
+
+### Fase 3.7 — Página pública (2026-11-03)
+El usuario pidió dejar el proyecto listo "como landing page final" y agregar funciones a criterio.
+
+**Portada** (`portada.js`): pantalla de entrada con las cifras reales (3 carreras · 139 materias ·
+134 grupos · 665 ofertas · 276 maestros), las tres carreras en tarjetas con sus créditos y grupos
+abiertos, y qué puedes hacer. Ninguna cifra está escrita a mano: salen de `PLANES` y `SCHEDULE`.
+Se muestra una vez y después solo con 🏠 o la tecla `H`.
+
+**Funciones nuevas**
+- [x] **Buscador global** (`buscador.js`, tecla `/` o `Ctrl+K`): materias del plan, maestros de las
+      tres carreras y grupos, en una sola caja. El índice se arma al primer uso.
+- [x] **Comparador de maestros** (`comparador.js`): todos los que dan una materia, lado a lado, con
+      sus tres métricas, grupos, horario y cupo. Marca el mejor calificado y dice cuántos no tienen
+      calificación todavía, para no confundir "sin datos" con "malo".
+- [x] **Vista de grupo**: desde el buscador, la rejilla semanal completa de `3CM2` y con quién.
+- [x] **Tema claro / oscuro** (`tema.js`): sigue al sistema hasta que elijas; se aplica en el
+      `<head>` para que no parpadee.
+- [x] **Atajos** (`atajos.js`): `1`–`6` pestañas, `/` buscar, `T` tema, `H` portada, `?` ayuda, `Esc`.
+- [x] **Compartir horario por enlace** (`compartir.js`): el horario viaja en el fragmento de la URL,
+      que no se manda al servidor. Quien lo abre puede verlo o tomarlo. El avance no viaja.
+- [x] **Instalable y sin internet** (`sw.js`, `manifest.webmanifest`, `favicon.svg`).
+- [x] Meta tags, Open Graph y `theme-color` para cuando se publique.
+
+**Rendimiento**
+- [x] La pestaña Maestros pasó de **40,026 a 5,007 nodos**: el `<select>` "+ Materia" de cada fila
+      traía las ~140 materias ya puestas (276 × 140 ≈ 38,600 `<option>`) y se reconstruía en cada
+      repintado, o sea en cada letra del buscador. Ahora se llena al abrirlo.
+- [x] Colores movidos a tokens de `:root`; en `styles.css` ya casi no quedan hex sueltos.
+- [ ] `schedule.js` (174 KB) sigue en el arranque: `core.js` lo necesita para `TEACHERS` y la
+      portada para sus cifras. Se resuelve con la BD, pidiendo por carrera y semestre.
+
+### Fase 3.8 — Corrección: el Historial se colaba entre carreras (2026-11-03)
+Reportado por el usuario: en IA y LCD la pestaña Historial mostraba los grupos de ISC.
+
+- Causa: `historial.js` es 100 % de ISC (780 entradas) y **nadie filtraba por carrera**. El plan,
+  las ofertas y los cupos sí filtran; el historial se quedó fuera cuando se hizo multi-carrera.
+- [x] Las 780 entradas llevan ahora `carrera:"ISC"` explícito, como manda `CLAUDE.md` §9.
+- [x] `carreraDeGrupo()` / `carreraDeOferta()` en `core.js` como respaldo para datos sin campo.
+- [x] `historialDe(periodo)` filtra, y el selector de periodo solo lista los que tienen algo de
+      la carrera activa.
+- [x] Sin datos, la pestaña dice por qué ("Todavía no hay historial de IA; los guardados son de
+      ISC") y esconde los selectores, en vez de enseñar los de otra carrera.
+- [x] En la ficha del maestro, "Materias por periodo" lleva etiqueta **solo ISC** y explica el
+      vacío: un maestro que solo da IA no es un maestro sin clases.
+
+### Fase 3.9 — Materias de maestro: nombre, filtro y orden (2026-11-03)
+Las etiquetas verde/roja de cada maestro no decían en ningún lado qué significaban —solo en el
+tooltip— y no se podía ni filtrar ni ordenar por ellas.
+
+- [x] Se llaman **Imparte** (verde) y **Ya no** (rojo). Textos centralizados en `MAT_ESTADO`.
+- [x] **Leyenda** bajo la barra de herramientas, con las dos etiquetas y la aclaración de que es
+      una nota tuya que arranca del registro oficial y vive en este navegador.
+- [x] Selector **Materias**: `Todas · Solo las que imparte · Solo las que ya no`. Filtra las
+      etiquetas y saca de la lista a los maestros sin ninguna que encaje.
+- [x] Tres criterios nuevos en **Ordenar por**: imparte más materias, imparte menos, y más
+      materias que ya no da. A igualdad, alfabético, para que la lista no baile.
+- [x] El contador de arriba dice qué está contando según el filtro, y la tabla vacía explica el
+      porqué en vez de quedarse en blanco.
+
+### Fase 4 — Base de datos (ya NO es "aparte de la app")
+**Derogada la regla de "sin backend".** Ver `MEMORIA-FASE-BD.md`, que es el acuerdo completo: Postgres 17 + PHP 8.2/Apache en Docker, esquema OLTP de ~18 tablas, login de alumnos del IPN, reseñas con rúbricas y moderación. **Entrega: primera semana de diciembre de 2026.**
+
+- [x] Esquema propuesto, decisiones cerradas y orden de trabajo → `MEMORIA-FASE-BD.md`.
+- [ ] Preguntas al profesor (miércoles): si la entrega exige modelo dimensional, si PHP es obligatorio, si la autenticación debe ser propia, y si pide procedimientos/triggers/vistas. De la primera depende si el esquema es solo OLTP o OLTP + vistas materializadas en estrella.
+- [ ] Esquema SQL + seed con los datos de hoy, numerado como en Seismic.
+- [ ] `docker compose` con Postgres + pgAdmin + PHP, sin el `trust` ni la contraseña por defecto del ejemplo.
+- [ ] Los `.ps1` emiten SQL; los `.js` de datos se generan desde la BD.
+- [ ] Login, avance en la BD, y después reseñas.
 - [ ] Definir alcance con el equipo Catscoms.
 
 ---

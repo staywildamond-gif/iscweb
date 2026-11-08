@@ -3,6 +3,24 @@
 // ============================================================
 let profSort = { key: "name", dir: "asc" };
 let profTurno = "ambos";   // P16: ambos | M | V
+let profMats = "todas";    // qué materias enseñar: todas | imparte | yano
+
+// Las materias de un maestro se marcan verde o roja. Antes el único sitio donde
+// decía qué significaba cada color era el tooltip, y no se podía ni ordenar ni
+// filtrar por ello. Verde = "la imparte", rojo = "ya no la imparte"; arranca
+// con lo que dice el roster y de ahí es nota del usuario.
+const MAT_ESTADO = {
+  on:  { lbl: "Imparte", title: "La imparte — pulsa para marcar que ya no" },
+  off: { lbl: "Ya no",   title: "Ya no la imparte — pulsa para marcar que sí" },
+};
+
+// Materias de un maestro visibles con el filtro actual
+function matsVisibles(name) {
+  const mats = teacherMaterias(name);
+  if (profMats === "imparte") return mats.filter((x) => x.active);
+  if (profMats === "yano") return mats.filter((x) => !x.active);
+  return mats;
+}
 const profsHead = document.getElementById("profsHead");
 const profsBody = document.getElementById("profsBody");
 const searchProf = document.getElementById("searchProf");
@@ -33,14 +51,22 @@ function renderProfs() {
 
   let rows = teachersActuales().map((t) => {
     const m = getMetric(t.name);
+    const mats = teacherMaterias(t.name);
     return {
       ...t,
       ...m,
       _grupo: t.grupos[0] || "",
       _semestre: t.semestres[0] || 99,
       _materia: t.materias[0] || "",
+      _imparte: mats.filter((x) => x.active).length,
+      _yano: mats.filter((x) => !x.active).length,
     };
   });
+
+  // Con el filtro de materias puesto, un maestro sin ninguna que encaje no
+  // aporta nada: saldría como una fila vacía. Mejor no listarlo.
+  if (profMats === "imparte") rows = rows.filter((r) => r._imparte > 0);
+  if (profMats === "yano") rows = rows.filter((r) => r._yano > 0);
 
   if (q) {
     rows = rows.filter((r) =>
@@ -54,6 +80,13 @@ function renderProfs() {
     rows = rows.filter((r) => turnosDeGrupos(r.grupos).has(profTurno));
   }
   document.getElementById("profCount").textContent = rows.length;
+  const txt = document.getElementById("profCountTxt");
+  if (txt) {
+    txt.textContent =
+      profMats === "imparte" ? "maestros con materias que imparten"
+      : profMats === "yano" ? "maestros con materias que ya no dan"
+      : q || profTurno !== "ambos" ? "maestros que encajan" : "maestros en total";
+  }
 
   const { key, dir } = profSort;
   rows.sort((a, b) => {
@@ -66,6 +99,12 @@ function renderProfs() {
     if (key === "semestre") {
       return dir === "asc" ? a._semestre - b._semestre : b._semestre - a._semestre;
     }
+    // Cuántas materias imparte / cuántas ya no. A igualdad, alfabético, para
+    // que la lista no baile entre repintados.
+    if (key === "imparte" || key === "yano") {
+      const fld = key === "imparte" ? "_imparte" : "_yano";
+      return (dir === "asc" ? a[fld] - b[fld] : b[fld] - a[fld]) || a.name.localeCompare(b.name);
+    }
     // Métricas numéricas
     const av = a[key] === "" || a[key] == null ? null : Number(a[key]);
     const bv = b[key] === "" || b[key] == null ? null : Number(b[key]);
@@ -74,6 +113,21 @@ function renderProfs() {
     if (bv == null) return -1;
     return dir === "asc" ? av - bv : bv - av;
   });
+
+  if (!rows.length) {
+    // Decir por qué está vacío. "Solo las que ya no" sale vacío hasta que
+    // marques tu primera materia en rojo, y eso hay que explicarlo.
+    const motivo =
+      profMats === "yano"
+        ? `Todavía no has marcado ninguna materia como <b>Ya no</b>. Pulsa una materia
+           verde en la lista para marcarla.`
+        : profMats === "imparte"
+        ? `Ningún maestro tiene materias marcadas como <b>Imparte</b>.`
+        : `Ningún maestro encaja con lo que buscaste.`;
+    profsBody.innerHTML = `<tr><td colspan="${PROF_COLS.length}">
+        <div class="drop-empty big">${motivo}</div></td></tr>`;
+    return;
+  }
 
   profsBody.innerHTML = rows.map((r) => `
     <tr>
@@ -103,23 +157,47 @@ function renderProfs() {
 
   // agregar materia desde el menú desplegable
   profsBody.querySelectorAll("select.addmat").forEach((sel) => {
+    // Las opciones se llenan al abrirlo, no al pintar la tabla: son ~140
+    // materias por maestro y hay 276 maestros. Ver llenarAddMat().
+    sel.addEventListener("mousedown", () => llenarAddMat(sel), { once: true });
+    sel.addEventListener("focus", () => llenarAddMat(sel), { once: true });
     sel.onchange = () => {
       if (sel.value) addMat(sel.dataset.name, sel.value);
     };
   });
 }
 
+// Llena un "+ Materia" la primera vez que lo tocas.
+//
+// Antes cada fila traía las ~140 opciones ya puestas: 276 maestros × 140 =
+// ~38,600 nodos de <option> que se volvían a construir en CADA repintado de la
+// tabla, o sea en cada letra que escribías en el buscador y en cada cambio de
+// orden. La pestaña pasó de ~40,000 nodos a ~1,500.
+function llenarAddMat(sel) {
+  if (sel.dataset.lleno === "1") return;
+  sel.dataset.lleno = "1";
+  const taken = new Set(teacherMaterias(sel.dataset.name).map((x) => x.mat));
+  const frag = document.createDocumentFragment();
+  ALL_MATERIAS.forEach((m) => {
+    if (taken.has(m)) return;
+    const o = document.createElement("option");
+    o.value = m;
+    o.textContent = titleCase(m);
+    frag.appendChild(o);
+  });
+  sel.appendChild(frag);
+}
+
 // Celda de materias: etiquetas verde (activa) / roja (inactiva) + menú "Agregar materia"
 function matsCellHTML(name) {
-  const mats = teacherMaterias(name);
-  const tags = mats.map((x) =>
-    `<span class="mtag ${x.active ? "on" : "off"}" data-name="${esc(name)}" data-mat="${esc(x.mat)}" title="${x.active ? "Activa este semestre — clic para desactivar" : "Inactiva — clic para activar"}">${esc(titleCase(x.mat))}${x.added ? `<i class="mx" data-rm="1" title="Quitar">×</i>` : ""}</span>`
-  ).join("");
-  const taken = new Set(mats.map((x) => x.mat));
-  const opts = ALL_MATERIAS.filter((m) => !taken.has(m))
-    .map((m) => `<option value="${esc(m)}">${esc(titleCase(m))}</option>`).join("");
+  const mats = matsVisibles(name);
+  const tags = mats.map((x) => {
+    const e = MAT_ESTADO[x.active ? "on" : "off"];
+    return `<span class="mtag ${x.active ? "on" : "off"}" data-name="${esc(name)}" data-mat="${esc(x.mat)}" title="${e.title}">${esc(titleCase(x.mat))}${x.added ? `<i class="mx" data-rm="1" title="Quitar">×</i>` : ""}</span>`;
+  }).join("");
+  // El <select> va vacío a propósito: se llena al abrirlo (llenarAddMat)
   const sel = `<select class="addmat" data-name="${esc(name)}" aria-label="Agregar materia">
-      <option value="">+ Materia</option>${opts}</select>`;
+      <option value="">+ Materia</option></select>`;
   return `<div class="pmats">${tags}${sel}</div>`;
 }
 
@@ -155,6 +233,12 @@ const sortProfEl = document.getElementById("sortProf");
 sortProfEl.addEventListener("change", () => {
   const [key, dir] = sortProfEl.value.split("|");
   profSort = { key, dir };
+  renderProfs();
+});
+
+const matsProfEl = document.getElementById("matsProf");
+matsProfEl?.addEventListener("change", () => {
+  profMats = matsProfEl.value;
   renderProfs();
 });
 
@@ -287,7 +371,7 @@ function showProfDetail(name) {
       <div class="pd-m"><div class="pd-m-label">Dificultad</div>${metricCell(m.dificultad, "dif")}</div>
     </div>
 
-    <h3 class="pd-section">Materias por periodo (26/2 → 27/1)</h3>
+    <h3 class="pd-section">Materias por periodo (26/2 → 27/1) <span class="pd-solo">solo ISC</span></h3>
     ${periodoMatsHTML(name)}
 
     <h3 class="pd-section">Horario semanal</h3>
@@ -317,10 +401,20 @@ function materiasDeProfPeriodo(name, periodo) {
 
 // Etiquetas verde (imparte en 27/1) / rojo (impartía en 26/2, ya no) para un maestro
 function periodoMatsHTML(name) {
+  // Esta sección es la única parte de la ficha que necesita historial.js (190 KB).
+  // Se pide al abrir la ficha y la ficha se repinta cuando llega.
+  if (typeof HISTORIAL === "undefined") {
+    cargarDato("historial.js").then(repintarActiva).catch(() => {});
+    return `<div class="drop-empty">Cargando periodos…</div>`;
+  }
   const ant = materiasDeProfPeriodo(name, "2026/2");
   const act = materiasDeProfPeriodo(name, "2027/1");
   if (ant.size === 0 && act.size === 0) {
-    return `<div class="drop-empty">Sin registro en 2026/2 ni 2027/1.</div>`;
+    // Ojo: el historial guardado es solo de ISC. Para un maestro que únicamente
+    // da IA o LCD esto sale vacío, y eso NO significa que no haya dado clase.
+    return `<div class="drop-empty">Sin registro en 2026/2 ni 2027/1.
+      El historial guardado es solo de ISC, así que un maestro que solo da IA o
+      Ciencia de Datos aparece vacío aquí.</div>`;
   }
   // grupos con su etiqueta de cupo (vigente para 27/1, histórico para 26/2)
   const gruposConCupo = (v, historico) =>

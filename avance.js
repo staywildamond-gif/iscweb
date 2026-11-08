@@ -2,19 +2,25 @@
 //  PESTAÑAS
 // ============================================================
 const tabsEl = document.getElementById("tabs");
+
+// Abre una pestaña por su nombre. Está suelto (y no dentro del onclick) porque
+// el buscador global y los atajos de teclado también necesitan saltar de pestaña.
+function irAPestana(tab) {
+  tabsEl.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll(".tabpane").forEach((p) => {
+    p.classList.toggle("active", p.id === "pane-" + tab);
+  });
+  if (tab !== "maestros" && typeof hideProfDetail === "function") hideProfDetail();
+  if (tab === "plan") render();
+  if (tab === "maestros") renderProfs();
+  if (tab === "horario") renderHorario();
+  if (tab === "optativas") renderOptativas();
+  if (tab === "historial") renderHistorial();
+  if (tab === "calendario") renderCalendario();
+}
+
 tabsEl.querySelectorAll(".tab").forEach((btn) => {
-  btn.onclick = () => {
-    tabsEl.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b === btn));
-    const tab = btn.dataset.tab;
-    document.querySelectorAll(".tabpane").forEach((p) => {
-      p.classList.toggle("active", p.id === "pane-" + tab);
-    });
-    if (tab === "plan") render();
-    if (tab === "maestros") renderProfs();
-    if (tab === "horario") renderHorario();
-    if (tab === "optativas") renderOptativas();
-    if (tab === "historial") renderHistorial();
-  };
+  btn.onclick = () => irAPestana(btn.dataset.tab);
 });
 
 // ============================================================
@@ -198,7 +204,10 @@ function renderDrop(drop, s, i) {
   }
 
   drop.innerHTML = `
-    <div class="drop-head">${list.length} ofert${list.length === 1 ? "a" : "as"} este semestre · elige una para sumarla a tu horario</div>
+    <div class="drop-head">
+      <span>${list.length} ofert${list.length === 1 ? "a" : "as"} este semestre · elige una para sumarla a tu horario</span>
+      ${list.length > 1 ? `<button class="cmpBtn" data-cmp="${s}-${i}">⚖️ Comparar maestros</button>` : ""}
+    </div>
     <div class="drop-list">
       ${list.map((e, k) => {
         const m = getMetric(e.profesor);
@@ -228,6 +237,8 @@ function renderDrop(drop, s, i) {
   drop.querySelectorAll(".prof-link").forEach((a) => {
     a.onclick = (e) => { e.preventDefault(); showProfDetail(a.dataset.prof); };
   });
+
+  drop.querySelector(".cmpBtn")?.addEventListener("click", () => abrirComparador(s, i));
 
   drop.querySelectorAll(".addBtn").forEach((btn) => {
     btn.onclick = () => {

@@ -1,0 +1,15 @@
+{
+  "name": "Avance ESCOM — plan, maestros y horario",
+  "short_name": "Avance ESCOM",
+  "description": "Tu avance del plan de estudios de ESCOM-IPN, las calificaciones de los maestros y tu horario de reinscripción sin choques.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f4fb",
+  "theme_color": "#4a4ee0",
+  "lang": "es-MX",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

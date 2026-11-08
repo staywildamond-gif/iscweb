@@ -147,7 +147,14 @@ function renderHorarioTable() {
 
   let html = `<table class="sched-table"><thead><tr>
     <th class="sched-hora">Hora</th>
-    ${DIAS.map((d) => `<th>${d}</th>`).join("")}
+    ${(typeof calSemanaActual === "function" ? calSemanaActual() : DIAS.map((d) => ({ dia: d })))
+      .map((x) => {
+        const cls = [x.inhabil ? "ghd-inhabil" : "", x.hoy ? "ghd-hoy" : ""].filter(Boolean).join(" ");
+        const sub = x.fecha
+          ? `<span class="ghd-fecha">${x.inhabil ? esc(x.inhabil) : calCorta(x.fecha)}</span>`
+          : "";
+        return `<th${cls ? ` class="${cls}"` : ""}${x.inhabil ? ` title="${esc(x.inhabil)}"` : ""}>${x.dia}${sub}</th>`;
+      }).join("")}
   </tr></thead><tbody>`;
 
   for (let i = minIdx; i <= maxIdx; i++) {

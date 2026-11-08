@@ -3,9 +3,12 @@
 
   Fuentes (editables a mano)            ->  Artefacto derivado (NO editar a mano)
   ---------------------------------------------------------------------------
-  horarios.csv + IMG/VESP/horario_completo1.csv  ->  schedule.js
   AESTR_CORREGIDO_3.csv + AESTR_VESPERTINO_plantilla.csv  ->  metrics.js
   maestros_manual.csv                            ->  maestros_manual.js
+  cupos.csv + cupos_2026_2.csv                   ->  cupos.js
+
+  schedule.js y planes.js NO se generan aquí: los hace build-data.ps1 desde el
+  HTML de data/. Este script solo los lee para cruzar métricas y cupos.
 
   Uso:   powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1
   Corre validate.ps1 al final para auditar el resultado.
@@ -84,8 +87,9 @@ $DIAS = @('Lun', 'Mar', 'Mie', 'Jue', 'Vie')
 # ============================================================
 # schedule.js ya NO se genera aqui. Ahora sale del HTML oficial de data/*/horario-*.html
 # para las tres carreras (ISC + IA + LCD) y lleva campo `carrera`. Corre build-data.ps1.
-# horarios.csv y IMG/VESP/horario_completo1.csv quedan como respaldo historico del
-# periodo 27/1 de ISC; ya no alimentan nada.
+# Los CSV que lo alimentaban (horarios.csv, IMG/VESP/horario_completo1.csv) y las
+# capturas de SAES de las que salieron se borraron el 2026-11-02: estan en el
+# historial de git si alguna vez hace falta volver a verlos.
 
 # ============================================================
 #  2) metrics.js
